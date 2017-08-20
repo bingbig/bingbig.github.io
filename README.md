@@ -5,5 +5,5 @@
 
 
 ### Docker
-- [Docker command](liub1993/liub1993.github.io/docker/docker/docker_command.md)
-- [Dockerfile](liub1993/liub1993.github.io/docker/docker/dockerfile.md)
+- [Docker command](https://github.com/liub1993/liub1993.github.io/blob/master/docker/docker_command.md)
+- [Dockerfile](https://github.com/liub1993/liub1993.github.io/blob/master/docker/dockerfile.md)
