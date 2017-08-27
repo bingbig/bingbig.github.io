@@ -52,6 +52,6 @@
 	- 数据传输基本单位为报文；
 	- 包含的主要协议：`FTP（文件传送协议）`、`Telnet（远程登录协议）`、`DNS（域名解析协议）`、`SMTP（邮件传送协议）`，`POP3协议（邮局协议）`，`HTTP协议（Hyper Text Transfer Protocol）`。
 
-[img](./img/osi.gif)
+![osi 七层模型](./img/osi.gif)
 
 
