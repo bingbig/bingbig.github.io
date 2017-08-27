@@ -47,13 +47,14 @@
 	
 	会话层、表示层和应用层重点：
 	- 数据传输基本单位为报文；
-	- 包含的主要协议：`FTP（文件传送协议）`、`Telnet（远程登录协议）`、`DNS（域名解析协议）`、`SMTP（邮件传送协议）`，`POP3协议（邮局协议）`，`HTTP协议（Hyper Text Transfer Protocol）`。
+	- 包含的主要协议：`FTP（文件传送协议）`、`Telnet（远程登录协议）`、[`DNS（域名解析协议）`](./DNS.md)、`SMTP（邮件传送协议）`，`POP3协议（邮局协议）`，`HTTP协议（Hyper Text Transfer Protocol）`。
 
 ![osi 七层模型](./img/osi.gif)
 
 
 # OSI五层模型
 ［source：http://www.ruanyifeng.com/blog/2012/05/internet_protocol_suite_part_i.html］
+
 ## 1. 概述
 ### 1.1 五层模型
 
