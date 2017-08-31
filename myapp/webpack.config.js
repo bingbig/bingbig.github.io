@@ -1,16 +1,20 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/index.js',
-  output: {
-    filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist')
-  },
+	entry: [
+		'babel-polyfill',
+		'react-hot-loader/patch',
+		'./src/index.js'
+	],
+	output: {
+		filename: 'bundle.js',
+		path: path.resolve(__dirname, 'dist')
+	},
   module: {
 	rules: [
 			{
 				test: /\.jsx?$/,
-				use: ['babel-loader?cacheDirectory'],
+				use: ['react-hot-loader/webpack', 'babel-loader?cacheDirectory'],
 				exclude: /node_modules/
 			},
 			{
