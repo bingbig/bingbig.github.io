@@ -112,3 +112,9 @@ session_destroy();
 ?>
 ```
 
+
+
+## 2. PHP面向对象
+
+[抽象类](./OOP/abstract_class.md)
+
