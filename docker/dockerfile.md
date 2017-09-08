@@ -33,20 +33,23 @@
 ### WORKDIR
 用来从镜像创建一个新容器时，在容器内部设置一个工作目录，`ENTRYPOINT` 和 `/` 或 `CMD` 指定的程序会在这个目录下执行
 WORKDIR	/opt/webapp/db
- 
+
 ### ENV
 用于在镜像构建过程中设置环境变量
-`ENV		RVM_PATH	/home/rvm`
+`ENV		RVM_PATH	/home/rvm   `
 
 ### USER
+
 指定镜像以什么用户去运行
 `USER	nginx`
 
 ### VOLUME
+
 用来向基于镜像创建的容器添加卷，一个卷是可以存在于一个或者多个容器内的特定的目录，这个目录可以绕过联合文件系统。
 `VOLUME		["/opt/project", "/data"]`
 
 ### ADD
+
 用来将构建环境下的文件盒目录复制到镜像中。源文件可以是URL，压缩包会被自动解压。
 
 `ADD	software.lic	/opt/application/software.lic`
@@ -54,9 +57,11 @@ WORKDIR	/opt/webapp/db
 ADD指令会使得构建缓存变得无效。如果通过ADD指令向镜像添加一个文件或者目录，那么这将是的Dockerfile中的后续指令都不能继续使用之前的构建缓存。
 
 ### COPY
+
 只负责复制
 
 ### ONBUILD
+
 能为镜像添加触发器。当一个镜像被用作其他镜像的基础镜像时（比如你的镜像需要从某未准备好的位置添加源代码，或者你需要执行特定于构建镜像的环境的脚本），该镜像中的触发器将会被执行。可以通过 `docker inspect` 查看镜像中的ONBUILD指令。
 ```
 ONBUILD	ADD 	.	/app/src
