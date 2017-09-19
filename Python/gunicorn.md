@@ -32,3 +32,29 @@ Gunicorn 服务器作为wsgi app的容器，能够与各种Web框架兼容（fla
 Nginx 是专业的服务器，性能更好，更专业，并发更高，可以做负载均衡，可以做静态文件缓存，还可以限制 ip 访问的频率等等。
 
 Gunicorn 一般用来多进程自动管理，有进程挂了Gunicorn可以把它拉起来，防止服务器长时间停止服务，还可以动态调整 worker 的数量，请求多的时候增加 worker 的数量，请求少的时候减少，这就是所谓的 `pre-fork 模型`。
+
+
+
+> 官方表示
+
+Gunicorn 是一个 WSGI HTTP 服务器. 最好在HTTP 代理服务器后使用它。 我们强烈推荐大家使用 [nginx](http://www.nginx.org/).
+
+下面是个例子帮助大家开始使用nginx：
+
+```nginx
+  server {
+    listen 80;
+    server_name example.org;
+    access_log  /var/log/nginx/example.log;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+  }
+```
+
+nginx被设置为一个反向代理服务器，代理监听localhost端口8000的Gunicorn服务。
+
+Nginx is set up as reverse proxy server to a Gunicorn server running on localhost port 8000.
