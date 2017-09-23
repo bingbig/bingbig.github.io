@@ -587,6 +587,7 @@ ORDER BY RATING DESC
 ---
 
 ## 627. Swap Salary
+
 Given a table `salary`, such as the one below, that has m=male and f=female values. Swap all f and m values (i.e., change all f values to m and vice versa) with a single update query and no intermediate temp table.
 For example:
 ```
@@ -615,5 +616,74 @@ SET
         WHEN 'm' THEN 'f'
         ELSE 'm'
     END;
+```
+
+-----
+
+
+
+## 596. Classes More Than 5 Students
+
+There is a table `courses` with columns: **student** and **class**
+
+Please list out all classes which have more than or equal to 5 students.
+
+For example, the table:
+
+```
++---------+------------+
+| student | class      |
++---------+------------+
+| A       | Math       |
+| B       | English    |
+| C       | Math       |
+| D       | Biology    |
+| E       | Math       |
+| F       | Computer   |
+| G       | Math       |
+| H       | Math       |
+| I       | Math       |
++---------+------------+
+
+```
+
+Should output:
+
+```
++---------+
+| class   |
++---------+
+| Math    |
++---------+
+
+```
+
+**Note:**
+The students should not be counted duplicate in each course.
+
+## Solutions
+
+```sql
+SELECT
+    class
+FROM
+    (SELECT
+        class, COUNT(DISTINCT student) AS num
+    FROM
+        courses
+    GROUP BY class) AS temp_table
+WHERE
+    num >= 5
+;
+```
+
+```sql
+SELECT
+    class
+FROM
+    courses
+GROUP BY class
+HAVING COUNT(DISTINCT student) >= 5
+;
 ```
 

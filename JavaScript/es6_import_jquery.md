@@ -44,7 +44,12 @@ import * as jQuery from 'jquery';
 
 两个文件都采用第3种方法导入jquery，结果，index中的`$()`是函数，而igv.js中的却不是，却是jquery内部函数变量构成的一个对象。igv.js只能采用第一种方法获取jquery包中的全部变量`jQuery`，但是还不够，有时候我们会用`$`来表示`jQuery`，那怎么办呢？`const $ = jQuery;`
 
+所以，引用jquery最好用:
 
+```javascript
+import jQuery from 'jquery';
+const $ = jQuery;
+```
 
 
 
