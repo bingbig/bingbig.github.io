@@ -105,8 +105,6 @@ echo 和print都是是一个语言结构，有无括号均可使用：`echo` 或
 
 **提示：echo 比 print 稍快，因为它不返回任何值。**
 
-
-
 `htmlspecialchars()` 函数把特殊字符转换为 HTML 实体。这意味着 `<` 和` >` 之类的 HTML 字符会被替换为` &lt; ` 和 ` &lt; ` 。这样可防止攻击者通过在表单中注入 HTML 或 JavaScript 代码（跨站点脚本攻击）对代码进行利用。
 
 
@@ -127,8 +125,6 @@ echo 和print都是是一个语言结构，有无括号均可使用：`echo` 或
 ```php
 setcookie(name, value, expire, path, domain);
 ```
-
-
 
 在您把用户信息存储到 PHP session 中之前，首先必须启动会话。
 
@@ -164,8 +160,6 @@ session_destroy();
 
 
 
-
-
 ==Function name must be a string==，因此，可以用string来执行函数
 
 ```php
@@ -173,7 +167,6 @@ session_destroy();
 function display_result() {
 	echo "successfully\n";
 }
-$x = "display";
 
 'display_result'();		// successfully
 display_result();		// successfully
@@ -201,8 +194,6 @@ test();
 echo $var1;			// 3
 ?>
 ```
-
-
 
 
 
