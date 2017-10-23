@@ -5,7 +5,7 @@
 [source:
 
 1.  http://www.w3school.com.cn/xmldom/dom_http.asp
-2. https://segmentfault.com/a/1190000004322487
+2.  https://segmentfault.com/a/1190000004322487
 
 ]
 
@@ -197,7 +197,7 @@ interface XMLHttpRequest : XMLHttpRequestEventTarget {
 
 
 
-#### getResponseHead()
+#### getResponseHeader()
 
 返回指定HTTP响应头的值。
 
