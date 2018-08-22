@@ -11,7 +11,7 @@
 
 `RUN apt-get install -y nginx`
 
-如果在一个不支持shell平台上运行活着不希望在shell中运行（如避免shell字符串篡改），可以使用exec格式的RUN指令
+如果不支持在shell平台上运行或者不希望在shell中运行（如避免shell字符串篡改），可以使用exec格式的RUN指令
 
 `RUN	["apt-get", "install", "-y", "nginx"]`
 
