@@ -1,7 +1,0 @@
-{
-  "presets": [ "es2016", "react" ],
-  "plugins": [
-  	"react-hot-loader/babel",
-  	["import", { libraryName: "antd", style: "css" }]
-  ]
-}
