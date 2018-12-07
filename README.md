@@ -1,21 +1,14 @@
+---
+home: true
+actionText: 快速上手 →
+actionLink: https://v0.vuepress.vuejs.org/zh/default-theme-config/
 
-**欢迎关注和指错**
-
-### Linux
-- [Web日志分析](https://github.com/liub1993/liub1993.github.io/blob/master/Linux/编译安装gcc.md)
-- [Centos 5 yum 源](https://github.com/liub1993/liub1993.github.io/blob/master/Linux/centos5_yum%E6%BA%90.md)
-- [僵尸进程]()
-- ​
-### Docker
-- [Docker command](https://github.com/liub1993/liub1993.github.io/blob/master/docker/docker_command.md)
-- [Dockerfile](https://github.com/liub1993/liub1993.github.io/blob/master/docker/dockerfile.md)
-
-### MySQL
-- [LeetCode Database](https://github.com/liub1993/liub1993.github.io/blob/master/MySQL/LeetCode_MySQL.md)
-- [MySQL 优化](https://github.com/liub1993/liub1993.github.io/blob/master/MySQL/MySQL优化.md)
-
-### Security
-- [Web开发安全](https://github.com/liub1993/liub1993.github.io/blob/master/Security/web_security.md)
-
-
-
+features:
+- title: 简洁至上
+  details: 以 Markdown 为中心的项目结构，以最少的配置帮助你专注于写作。
+- title: Vue驱动
+  details: 享受 Vue + webpack 的开发体验，在 Markdown 中使用 Vue 组件，同时可以使用 Vue 来开发自定义主题。
+- title: 高性能
+  details: VuePress 为每个页面预渲染生成静态的 HTML，同时在页面被加载的时候，将作为 SPA 运行。
+footer: MIT Licensed | Copyright © 2018-present Evan You
+---
