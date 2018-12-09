@@ -17,7 +17,7 @@ module.exports = {
                     {text: 'Linux', link: '/Linux/content'},
                     {text: 'Docker', link: '/docker/content'},
                     {text: '操作系统', link: '/OS/content'},
-                    {text: '更多归档', link: '/content'},
+                    { text: 'JavaScipt', link: '/JavaScript/content'}
                 ]
             },
             {
@@ -81,12 +81,30 @@ module.exports = {
                 'sys_and_hardware_clock',
                 'compile_gcc',
                 'track_process',
+                'web_security',
             ],
             '/docker/': [
                 'command',
                 'dockerfile',
                 'network',
                 'container_process',
+            ],
+            '/OS/': [
+                'history',
+                'memory',
+                'process_thread',
+                'deadlock_hungry',
+                'sync',
+            ],
+            '/JavaScript/': [
+                'es6_import_jquery',
+                'js_deepcopy',
+                'js_tips',
+                'XMLHttpRequest',
+                'React.js/React_webpack_babel_config'
+            ],
+            '/Bioinformatics/': [
+
             ],
             '/': [
                 '',
