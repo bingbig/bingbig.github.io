@@ -13,7 +13,7 @@ module.exports = {
                 text: '归档',
                 items: [
                     {text: 'PHP', link: '/PHP/content'},
-                    {text: '网络', link: '/OSI/content'},
+                    {text: '网络', link: '/network/content'},
                     {text: 'Linux', link: '/Linux/content'},
                     {text: 'Docker', link: '/docker/content'},
                     {text: '操作系统', link: '/OS/content'},
@@ -52,6 +52,16 @@ module.exports = {
                 'OOP/abstract_class',
                 'Laravel/Container',
                 'pattern/单例模式'
+            ],
+            '/network/': [
+                'physical',
+                'DataLink',
+                'transport',
+                'network',
+                'TCP',
+                'DNS',
+                'OSI',
+                'protocals'
             ],
             '/': [
                 '',
