@@ -38,8 +38,10 @@ var_dump([
     0 == "0",
     "" == "0"
 ]);
+```
 
 输出：
+```shell
 bool(true)
 bool(true)
 bool(true)
@@ -47,12 +49,12 @@ bool(true)
 bool(true)
 bool(true)
 array(3) {
-  [0]=>
-  bool(true)
-  [1]=>
-  bool(true)
-  [2]=>
-  bool(false)
+    [0]=>
+        bool(true)
+    [1]=>
+        bool(true)
+    [2]=>
+        bool(false)
 }
 ```
 
@@ -72,23 +74,23 @@ PHP 中的许多预定义变量都是“超全局的”，这意味着它们在�
 
 这些超全局变量是：
 
-- $GLOBALS
+- `$GLOBALS`
 
-- $_SERVER
+- `$_SERVER`
 
-- $_REQUEST
+- `$_REQUEST`
 
-- $_POST
+- `$_POST`
 
-- $_GET
+- `$_GET`
 
-- $_FILES
+- `$_FILES`
 
-- $_ENV
+- `$_ENV`
 
-- $_COOKIE
+- `$_COOKIE`
 
-- $_SESSION
+- `$_SESSION`
 
   ​
 
@@ -96,7 +98,7 @@ PHP 中的许多预定义变量都是“超全局的”，这意味着它们在�
 
 **PHP 的真正力量来自它的函数：它拥有超过 1000 个内建的函数。**
 
-echo 和print都是是一个语言结构，有无括号均可使用：`echo` 或` echo()`，`print`和`print()`。
+`echo` 和 `print` 都是是一个语言结构，有无括号均可使用：`echo` 或` echo()`，`print`和`print()`。
 
 `echo` 和 `print` 之间的差异：
 
@@ -107,18 +109,17 @@ echo 和print都是是一个语言结构，有无括号均可使用：`echo` 或
 
 `htmlspecialchars()` 函数把特殊字符转换为 HTML 实体。这意味着 `<` 和` >` 之类的 HTML 字符会被替换为` &lt; ` 和 ` &lt; ` 。这样可防止攻击者通过在表单中注入 HTML 或 JavaScript 代码（跨站点脚本攻击）对代码进行利用。
 
-
-
 `include` 和 `require` 语句是相同的，除了错误处理方面：
 
 - require 会生成致命错误（`E_COMPILE_ERROR`）并停止脚本
 - include 只生成警告（`E_WARNING`），并且脚本会继续
 
 
-
 `setcookie()` 函数用于设置 cookie。
 
-注释：setcookie() 函数必须位于 `<html>` 标签之前。
+::: tip
+setcookie() 函数必须位于 `<html>` 标签之前。
+:::
 
 ### 语法
 
@@ -143,11 +144,9 @@ setcookie(name, value, expire, path, domain);
 
 ```php
 <?php
-session_destroy();
+	session_destroy();
 ?>
 ```
-
-
 
 `substr()`第二个参数是`start`，第三个参数是`length`可省略。start若为负则从末端开始计，最后一个字符位置是`-1`，向前依次减小。length若为正数表示从start开始的长度，若为负数表示从末端略去的字符长度，例如`-2`表示从末尾开始略去两个字符。
 
@@ -158,9 +157,7 @@ session_destroy();
 ?>
 ```
 
-
-
-==Function name must be a string==，因此，可以用string来执行函数
+`Function name must be a string`，因此，可以用string来执行函数
 
 ```php
 <?php
@@ -172,8 +169,6 @@ function display_result() {
 display_result();		// successfully
 ?>
 ```
-
-
 
 `global` 
 
@@ -195,8 +190,6 @@ echo $var1;			// 3
 ?>
 ```
 
-
-
 ## 2. PHP面向对象
 
 [抽象类](./OOP/abstract_class.md)
@@ -205,7 +198,6 @@ PHP 5 新增了一个 `final` 关键字。
 
 1. 如果父类中的`方法`被声明为 final，则子类无法覆盖该方法。
 2. 如果一个`类`被声明为 final，则不能被继承。
-
 
 
 静态属性只能通过类来访问（但静态方法可以）。
@@ -229,10 +221,6 @@ $a->show();
 // static method show
 ```
 
-
-
-
-
 ## 3. PHP运行机制
 
 PHP的所有应用程序都是通过`WEB服务器(如IIS或Apache)`和`php引擎程序（如smarty）`解释执行完成的，
@@ -243,7 +231,6 @@ PHP的所有应用程序都是通过`WEB服务器(如IIS或Apache)`和`php引擎
 2. WEB服务器接受这个请求，并根据其后缀进行判断如果是一个PHP请求，WEB服务器从硬盘或内存中取出用户要访问的PHP应用程序，并将其发送给 PHP引擎程序。
 3. PHP引擎程序将会对WEB服务器传送过来的文件从头到尾进行扫描并根据命令从后台读取，处理数据，并动态地生成相应的HTML页面。
 4. PHP引擎将生成HTML页面返回给WEB服务器。WEB服务器再将HTML页面返回给客户端浏览器。
-
 
 
 虚拟主机通常用fast-cgi或者php-cgi方式，因为可以把php程序和apache隔离开，防止虚拟主机的拥有者执行恶意程序。
@@ -266,16 +253,13 @@ Web程序启动时就作为启动，等待请求。实现了类似连接池的�
 
 FastCGI的工作原理是：
 
-1. Web Server 启动时载入FastCGI进程管理器【PHP的FastCGI进程管理器是PHP-FPM(php-FastCGI Process Manager)】（IIS ISAPI或Apache Module);
+1. Web Server 启动时载入FastCGI进程管理器【PHP的FastCGI进程管理器是PHP-FPM ( php-FastCGI Process Manager )】（IIS ISAPI或Apache Module);
 2. FastCGI进程管理器自身初始化，启动多个CGI解释器进程 (在任务管理器中可见多个php-cgi.exe)并等待来自Web Server的连接。
 3. 当客户端请求到达Web Server时，FastCGI进程管理器选择并连接到一个CGI解释器。Web server将CGI环境变量和标准输入发送到FastCGI子进程php-cgi.exe。 
 4. FastCGI子进程完成处理后将标准输出和错误信息从同一连接返回Web Server。当FastCGI子进程关闭连接时，请求便告处理完成。FastCGI子进程接着等待并处理来自FastCGI进程管理器（运行在 WebServer中）的下一个连接。 在正常的CGI模式中，php-cgi.exe在此便退出了。
 
 在上述情况中，你可以想象 CGI通常有多慢。每一个Web请求PHP都必须重新解析php.ini、重新载入全部dll扩展并重初始化全部[数据结构](http://lib.csdn.net/base/datastructure)。使用FastCGI，所有这些都只在进程启动时发生一次。一个额外的好处是，持续数据库连接(Persistent database connection)可以工作。
 
-
-
 **Nginx默认不支持CGI模式，它是以FastCGI方式运行的。所以使用Nginx+PHP就是直接配置为FastCGI模式。**
-
 
 

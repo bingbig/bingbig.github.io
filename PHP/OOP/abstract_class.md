@@ -1,4 +1,6 @@
-## 抽象类[ ¶](http://php.net/manual/zh/language.oop5.abstract.php#language.oop5.abstract)
+## 抽象类
+
+[查看来源](http://php.net/manual/zh/language.oop5.abstract.php#language.oop5.abstract)
 
 *`PHP 5` 支持抽象类和抽象方法。定义为抽象的类不能被实例化*。任何一个类，如果它里面至少有一个方法是被声明为抽象的，那么这个类就必须被声明为抽象的。*被定义为抽象的方法只是声明了其调用方式（参数），不能定义其具体的功能实现*。
 
