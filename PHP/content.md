@@ -1,9 +1,9 @@
 ---
 prev: /
-next: /OSI/content
+next: /network/content
 ---
 
-# PHP 目录
+# PHP
 
 ## 一些基础的笔记
 - [PHP基础知识](/PHP/basic.md)

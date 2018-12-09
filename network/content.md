@@ -1,4 +1,9 @@
-# 计算机网络目录
+---
+prev: /PHP/content
+next: /Linux/content
+---
+
+# 计算机网络
 
 ## 一些笔记
 - [物理层](physical.md)

@@ -63,9 +63,35 @@ module.exports = {
                 'OSI',
                 'protocals'
             ],
+            '/Linux/': [
+                'centos_ssh_login_too_slowly',
+                'centos5_yum_source',
+                'R730Linux_driver',
+                'iptables',
+                'LC_CTYPE_error',
+                'netstat',
+                'PBS',
+                'yum_Segmentation_fault',
+                'zombie_process',
+                'cpu_frequence_controller',
+                'mount_panasass_storage',
+                'log_analysis',
+                'change_perl_module_locations',
+                'sys_info',
+                'sys_and_hardware_clock',
+                'compile_gcc',
+                'track_process',
+            ],
+            '/docker/': [
+                'command',
+                'dockerfile',
+                'network',
+                'container_process',
+            ],
             '/': [
                 '',
-                'INSTALL'
+                'aboutme',
+                'INSTALL',
             ],
         },
         lastUpdated: '最近更新', // string | boolean

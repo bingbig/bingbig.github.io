@@ -1,4 +1,5 @@
 # CentOS ssh 登录等待时间长
+
 最为常见的原因是因为server的`sshd`会去`DNS`查找访问client IP的`hostname`，如果DNS不可用或者没有相关记录，就会耗费大量时间。一般情况下，设备无法连接DNS服务时会出现这种情况。
 
 1. 在server上/etc/hosts文件中把你本机的ip和hostname加入
