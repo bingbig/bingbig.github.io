@@ -20,30 +20,30 @@
 
 #### 安装gcc-4.8.5
 
-	```shell
+	```bash
 	wget http://gcc.parentingamerica.com/releases/gcc-4.8.5/gcc-4.8.5.tar.gz
 	```
 **报错，要求安装gmp，mpfr，mpc，**
     
 1.1 下载安装gmp
   
-```shell
+```bash
 	../configure --prefix=/pub/CMBdell/gmp-5.0.0
 ```
 	
 1.2 安装mpfr
 
-```shell
+```bash
 ./configure --prefix=/pub/CMBdell/mpfr-3.1.5 --with-gmp=/pub/CMBdell/gmp-5.0.0/
 ```
 	
 1.3 安装mpc
 
-```shell
+```bash
 ./configure --prefix=/pub/CMBdell/mpc-1.0.2 --with-gmp=/pub/CMBdell/gmp-5.0.0 --with-mpfr=/pub/CMBdell/mpfr-3.1.5/
 ```
 1.4 安装gcc
-```shell
+```bash
 ./configure --prefix=/pub/CMBdell/gcc-4.8.5 --enable-threads=posix --disable-checking --enable--long-long --enable-languages=c,c++,java --with-gmp=/pub/CMBdell/gmp-5.0.0 --with-mpfr=/pub/CMBdell/mpfr-3.1.5 --with-mpc=/pub/CMBdell/mpc-1.0.2/
 
 make && make install
@@ -55,15 +55,15 @@ configure: error: cannot compute suffix of object files: cannot compile
 ```
 
 加上变量：
-```shell
+```bash
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/pub/CMBdell/gmp-5.0.0/lib:/pub/CMBdell/mpfr-3.1.5/lib:/pub/CMBdell/mpc-1.0.2/lib
 ```
 
-```shell
+```bash
  ./configure --prefix=/pub/CMBdell/gcc-4.8.5 --enable-threads=posix --disable-checking --enable--long-long --enable-languages=c,c++,java --with-gmp=/pub/CMBdell/gmp-5.0.0 --with-mpfr=/pub/CMBdell/mpfr-3.1.5 --with-mpc=/pub/CMBdell/mpc-1.0.2/
 make && make install
 ```
-```shell
+```bash
 yum install libmpc-devel mpfr-devel gmp-devel
 
 
@@ -89,7 +89,7 @@ make install
  
 configure的时候没有加上：`--enable-multiarch=no`，后续报错：`error while loading shared libraries: libc.so.6: ELF file OS ABI invalid`
 
-```shell
+```bash
 make -j10
 
 checking for x86_64-unknown-linux-gnu-gcc... /pub/CMBdell/gcc-4.9.4.src/build/./gcc/xgcc -B/pub/CMBdell/gcc-4.9.4.src/build/./gcc/ -B/pub/CMBdell/gcc-4.9.4/x86_64-unknown-linux-gnu/bin/ -B/pub/CMBdell/gcc-4.9.4/x86_64-unknown-linux-gnu/lib/ -isystem /pub/CMBdell/gcc-4.9.4/x86_64-unknown-linux-gnu/include -isystem /pub/CMBdell/gcc-4.9.4/x86_64-unknown-linux-gnu/sys-include   
@@ -105,16 +105,16 @@ make: *** [all] Error 2
 ```
 
 查看
-```shell
+```bash
 vim /pub/CMBdell/gcc-4.9.4.src/build/x86_64-unknown-linux-gnu/libgcc/config.log
 /pub/CMBdell/gcc-4.9.4.src/build/./gcc/cc1: error while loading shared libraries: libmpc.so.3: cannot open shared object file: No such file or directory
 ```
-```shell
+```bash
 export LD_LIBRARY_PATH=/pub/CMBdell/mpc-1.0.2/lib:/pub/CMBdell/gmp-5.0.0/lib:/pub/CMBdell/mpfr-3.1.5/lib/:$LD_LIBRARY_PATH
 rm -rf x86_64-unknown-linux-gnu/libgcc/config.cache
 ```
 
-```shell
+```bash
 libtool: link: ranlib .libs/libgfortran.a
 libtool: link: ( cd ".libs" && rm -f "libgfortran.la" && ln -s "../libgfortran.la" "libgfortran.la" )
 make[6]: Leaving directory `/pub/CMBdell/gcc-4.9.4.src/build/x86_64-unknown-linux-gnu/32/libgfortran'
@@ -135,7 +135,7 @@ You have mail in /var/spool/mail/root
 `mv gcc-4.9.4  gcc_src`
 0. 依赖
 在gcc_src下执行：`./contrib/download_prerequisites`下载依赖包
-```shell
+```bash
 cd gmp
 mkdir /pub/CMBdell/gcc-4.9.4/gmp-4.3.2
 ./configure --prefix=/pub/CMBdell/gcc-4.9.4/gmp-4.3.2
@@ -173,7 +173,7 @@ mkdir build && cd build
 1. 尝试添加163的yum源，没有作用。
 2. 发现没有安装gcc等，yum安装： 
 
-```shell
+```bash
 yum -y install gcc automake autoconf libtool make
 rpm -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm
 yum -y install ntfs-3g
@@ -205,7 +205,7 @@ LC_ALL=en_US.UTF-8
 之后scp复制数据库数据。重启mysql。但是，仍然需要 `setenforce 0` 之后才能正常读取数据。
 
 尝试1:
-```shell
+```bash
 semanage fcontext -a -t mysqld_db_t "/data/mysql(/.*)?"
 grep -i mysql /etc/selinux/targeted/contexts/files/file_contexts.local
 
@@ -220,7 +220,7 @@ Instead of:     semanage fcontext -a -t mysqld_db_t “/data/mysql(/.*)?”
 
 
 还可以：
-```shell
+```bash
 semanage fcontext -a -e /var/lib/mysql /srv/mysql
 restorecon -R -v /src/mysql
 ```

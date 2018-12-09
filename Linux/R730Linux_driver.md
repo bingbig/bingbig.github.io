@@ -8,13 +8,13 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 	解压到服务器后，`rpm -Uvh ****.rpm`  安装default目录下的64位rpm包即可。
 
 	查看hba卡信息：
-	```shell
+	```bash
 	lspci -nn | grep "Fibre Channel"
 	05:00.0 Fibre Channel [0c04]: QLogic Corp. ISP8324-based 16Gb Fibre Channel to PCI Express Adapter [1077:2031] (rev 02)
 	```
 
 	检查hba卡驱动是否被加载到系统内核：
-	```shell
+	```bash
 	[root@sky ~]# lsmod | grep qla2xxx
 	qla2xxx               551467  3 
 	scsi_transport_fc      55075  4 bnx2fc,fcoe,libfc,qla2xxx
@@ -22,7 +22,7 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 	如果没有加载，手动加载 `modprobe -v qla2xxx`
 	
 	查看hba卡挂载目录
-	```shell
+	```bash
 	[root@sky ~]# ll /sys/class/fc_host/
 	total 0
 	lrwxrwxrwx. 1 root root 0 Jun 25 09:26 host1 -> ../../devices/pci0000:00/0000:00:03.2/0000:05:00.0/host1/fc_host/host1
@@ -33,7 +33,7 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 	直接在服务器上 wget -cb http://www.dell.com/support/home/cn/zh/cnbsd1/Drivers/DriversDetails?driverId=R9G1X
 	
 	下载后是iso文件，需要挂载：
-	```shell
+	```bash
 	mount -o loop DELL_MDSS_Consolidated_RDVD_6_5_0_1.iso /media
 	cd  media
 	```
@@ -45,7 +45,7 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 1. 文件系统GPT
 	因为我们的盘阵大小为16TB（20块2T的硬盘，1块用于热备，其余9块做RAID5，因此一块用于灾备，剩余8块可用，16T），所以不能用上述文档中的 `fdisk` 进行分区，得用 `parted`。
 	
-	```shell
+	```bash
 	cd /dev/mapper/
 	parted mpathb
 	 #进入parted后，m可查看菜单，输入：
@@ -60,18 +60,18 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 	quit
 	```
 2. 格式化ext4
-	```shell
+	```bash
 	mkfs.ext4 /dev/mapper/mpathbp1
 	```
 	格式化需要一定的时间
 	
 3. 查看分区情况
-	```shell
+	```bash
 	fdisk -l
 	```
 	
 	重启系统之后会发现盘阵挂载到/dev/sdb下了。
-	```shell
+	```bash
 	[root@sky ~]# mount /dev/mapper/mpathbp1    /storage/	
 	[root@sky ~]# df -h
 	Filesystem            Size  Used Avail Use% Mounted on
@@ -87,7 +87,7 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 	需要将本地磁盘上的home目录转移到新挂载的storage上。
 首先自动挂载新盘阵，将之前的home目录挂载到local_disk作为本地盘使用。
 
-	```shell
+	```bash
 	vim /etc/fstab
 	/dev/mapper/vg_sky-lv_home /local_disk                   ext4    defaults        1 2
 	/dev/mapper/mpathbp1    /storage                   ext4    defaults        1 2
@@ -102,16 +102,16 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 	```
 	
 5. 禁止升级系统内核
-	```shell
+	```bash
 	vim /etc/yum.conf
 	```
 	在最后面添加：`exclude=kernel*`
-	```shell
+	```bash
 	yum clean all
 	```
 	修改root `vim ~/.bashrc`
 	添加： `alias yum="yum -x 'kernel*'"`
-	```shell
+	```bash
 	source ~/.bashrc
 	```
 	
@@ -120,7 +120,7 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 
 ## 4. 其他
 1. 查看已有内存信息
-	```shell
+	```bash
 	dmidecode |grep -A16 "Memory Device"
 	
 	Memory Device
@@ -144,7 +144,7 @@ http://downloads.dell.com/FOLDER03144852M/1/QLogic_LAN_9.0.0_Linux_Binary_9.0.0.
 	```
 
 2. 安装php7
-```shell
+```bash
 rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-6.noarch.rpm
 rpm -Uvh https://mirror.webtatic.com/yum/el6/latest.rpm
 yum install php70w-common php70w-pdo php70w-gd php70w-fpm php70w-xml php70w-mbstring php70w-pdo_dblib php70w-mysqlnd php70w-mcrypt 
@@ -162,14 +162,14 @@ baseurl=http://nginx.org/packages/centos/6/$basearch/
 gpgcheck=0
 enabled=1
 ```
-```shell
+```bash
 yum install nginx
 ```
 修改`/etc/nginx/nginx.conf`中用户名和用户组为`web user  web web;`
 
 4. 配置`iptables`和`selinux`
 修改`/etc/sysconfig/iptables`，在 `-A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT` 下面添加以下行：
-```shell
+```bash
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 1571 -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 1572 -j ACCEPT
@@ -186,22 +186,22 @@ Starting nginx: nginx: [emerg] bind() to
 ```
 应该是 `selinux` 的问题。
 安装selinux管理包：
- ```shell
+ ```bash
  yum install policycoreutils-python.x86_64
  ```
 添加端口
-```shell
+```bash
 semanage port -l | grep http_port_t
 semanage port -a -t http_port_t  -p tcp 1361
 semanage port -a -t http_port_t  -p tcp 1362
 semanage port -a -t http_port_t  -p tcp 1363
 ```
 设置完后需要
-```shell
+```bash
  /etc/init.d/nginx restart
 ```
 5. 安装 `MySQL` 和 `Redis`
-```shell
+```bash
 yum install redis mysql
 ```
 交互式配置：`/usr/bin/mysql_secure_installation`

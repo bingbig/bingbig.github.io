@@ -2,7 +2,7 @@
 
 ## Geneid
 
-```shell
+```bash
 tar xzvf geneid_v1.4.4.Jan_13_2011.tar.gz
 cd geneid_v1.4.4 && make
 ```
@@ -11,7 +11,7 @@ cd geneid_v1.4.4 && make
 
 ## genemark_hmm_euk_linux_64
 
-```shell
+```bash
 tar xzvf genemark_hmm_euk_linux_64.tar.gz
 cd genemark_hmm_euk_linux_64
 cp gm_key ~/.gm_key
@@ -21,7 +21,7 @@ cp gm_key ~/.gm_key
 
 ## GlimmerHMM
 
-```shell
+```bash
 tar xzvf tar xzvf GlimmerHMM-3.0.4.tar.gz 
 cd GlimmerHMM
 
@@ -33,7 +33,7 @@ chmod a-x glimmerhmm_linux
 
 ## Snap
 
-```shell
+```bash
 wget http://korflab.ucdavis.edu/Software/snap-2013-11-29.tar.gz
 tar xzvf snap-2013-11-29.tar.gz
 cd snap
@@ -44,7 +44,7 @@ make
 
 ## Genewise
 
-```shell
+```bash
 wget http://www.ebi.ac.uk/~birney/wise2/wise2.4.1.tar.gz
 
 tar xzvf wise2.4.1.tar.gz 
@@ -85,7 +85,7 @@ make: *** [realall] Error 2
 
 ## spaln
 
-```shell
+```bash
 wget http://www.genome.ist.i.kyoto-u.ac.jp/~aln_user/archive/spaln2.3.1.tar.gz
 tar xzvf spaln2.3.1.tar.gz
 cd spaln2.3.1

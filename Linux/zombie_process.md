@@ -12,12 +12,12 @@ unix提供了一种机制可以保证只要父进程想知道子进程结束时�
 
 ## 删除僵尸进程
 查看进程号
-```shell
+```bash
 ps -A -o stat,ppid,pid,cmd |grep -e '^[Zz]’
 ```
 
 杀死僵尸进程：
-```shell
+```bash
 kill -HUP 进程号
 ```
 

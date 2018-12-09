@@ -4,7 +4,7 @@
 
 
 
-```shell
+```bash
 tar vzvf augustus-3.3.tar.gz
 cd augustus
 vim common.mk

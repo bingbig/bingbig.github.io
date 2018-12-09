@@ -2,7 +2,7 @@
 
 ## 部署文档
   
-```shell
+```bash
 git clone https://github.com/bingbig/bingbig.github.io.git
 git checkout dev
 

@@ -3,13 +3,13 @@
 **SFLD errors： https://github.com/ebi-pf-team/interproscan/wiki/KnownIssues**
 
 运行报错：
-```shell
+```bash
 Command: bin/blast/ncbi-blast-2.3.0+/rpsbproc -i /home/pangel/interproscan-5.24-63.0/temp/dellcmb.bnu.edu.cn_20170619_150332200_361c//jobCDD/000000000001_000000000006.blast.raw.out -d data/cdd/3.14/data -m std 
 Error output from binary:
 bin/blast/ncbi-blast-2.3.0+/rpsbproc: symbol lookup error: bin/blast/ncbi-blast-2.3.0+/rpsbproc: undefined symbol: _ZZN4ncbi16CNcbiEmptyString3GetEvE9empty_str
 ```
 
-```shell
+```bash
 echo _ZZN4ncbi16CNcbiEmptyString3GetEvE9empty_str|c++filt
 ```
 
@@ -94,7 +94,7 @@ SUB_PROJ = rpsbproc RpsbProc asn2asn asn2fasta asn2flat asnval asn_cleanup \
     ...
 ```
 
-```shell
+```bash
 cd /home/pangel/interproscan-5.24-63.0/bin/blast/ncbi-blast-2.3.0+-src/c++/
 ./configure --prefix=/path/to/install
 cd /home/pangel/interproscan-5.24-63.0/bin/blast/ncbi-blast-2.3.0+-src/c++/ReleaseMT/build && make all_r

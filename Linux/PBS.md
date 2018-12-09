@@ -1,15 +1,15 @@
 ## PBS服务开启操作流程
 - 在主节点上打开PBS服务
-```shell
+```bash
 /etc/init.d/pbs_server start
 ```
 - 在主节点和其他节点打开PBS客户端。主节点虽是服务端，但也可参加计算，因而要打开客服。依次执行如下：
-```shell
+```bash
 /etc/init.d/pbs_mom   start
 ```
 
 - 在主节点上打开调度器
-```shell
+```bash
 /etc/init.d/maui.d     start
 ```
 
@@ -20,7 +20,7 @@
 	start               开启
 
 - 接下来是检查是否可以提交作业
-```shell
+```bash
 pbsnodes -a
 ```
 

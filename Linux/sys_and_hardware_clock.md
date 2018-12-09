@@ -15,13 +15,13 @@ Linux中有硬件时钟与系统时钟两种时钟。硬件时钟是指主机板
 
 对于系统时间，我们可以用 `date` 命令查看：
 
-```shell
+```bash
 unicom@ubuntu:~$ date 
 Wed Apr 15 15:52:23 CST 2015
 ```
 
 硬件时间，用 `hwclock` 命令查看
-```shell
+```bash
 unicom@ubuntu:~$ sudo hwclock –show //硬件时间需要root权限 
 [sudo] password for unicom: 
 Wed Apr 15 16:13:42 2015 -0.844670 seconds　　

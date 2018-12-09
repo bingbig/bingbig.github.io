@@ -15,11 +15,11 @@ DNS 是互联网核心协议之一。不管是上网浏览，还是编程开发�
 ## 2. 查询过程
 虽然只需要返回一个IP地址，但是DNS的查询过程非常复杂，分成多个步骤。
 工具软件dig可以显示整个查询过程。
-```shell
+```bash
 $ dig math.stackexchange.com
 ```
 
-```shell
+```bash
 [liub@MacBookPro OSI]$ dig math.stackexchange.com
 
 ; <<>> DiG 9.8.3-P1 <<>> math.stackexchange.com
@@ -46,7 +46,7 @@ math.stackexchange.com.	300	IN	A	151.101.1.69
 上面的命令会输出四段信息。
 
 第一段是查询参数和统计。
-```shell
+```bash
 ; <<>> DiG 9.8.3-P1 <<>> math.stackexchange.com
 ;; global options: +cmd
 ;; Got answer:
@@ -55,13 +55,13 @@ math.stackexchange.com.	300	IN	A	151.101.1.69
 ```
 
 第二段是查询内容。
-```shell
+```bash
 ;; QUESTION SECTION:
 ;math.stackexchange.com.		IN	A
 ```
 
 第三段是DNS服务器的答复。
-```shell
+```bash
 ;; ANSWER SECTION:
 math.stackexchange.com.	300	IN	A	151.101.193.69
 math.stackexchange.com.	300	IN	A	151.101.65.69
@@ -72,7 +72,7 @@ math.stackexchange.com.	300	IN	A	151.101.1.69
 上面结果显示，math.stackexchange.com有四个A记录，即四个IP地址。300是`TTL值（Time to live 的缩写）`，表示缓存时间，即300秒之内不用重新查询。
 
 第四段是DNS服务器的一些传输信息。
-```shell
+```bash
 ;; Query time: 193 msec
 ;; SERVER: 202.112.80.168#53(202.112.80.168)
 ;; WHEN: Sun Aug 27 16:19:43 2017
@@ -94,7 +94,7 @@ DNS服务器的IP地址，有可能是动态的，每次上网时由网关分配
 
 本机只向自己的DNS服务器查询，dig命令有一个@参数，显示向其他DNS服务器查询的结果。
 
-```shell
+```bash
 $ dig @4.2.2.2 math.stackexchange.com
 ```
 上面命令指定向DNS服务器`4.2.2.2`查询。
@@ -141,13 +141,13 @@ DNS服务器根据域名的层级，进行分级查询。
 ## 6. 分级查询的实例
 dig命令的+trace参数可以显示DNS的整个分级查询过程。
 
-```shell
+```bash
 $ dig +trace math.stackexchange.com
 ```
 
 上面命令的第一段列出根域名`.`的所有NS记录，即`所有根域名服务器`。
 
-```shell
+```bash
 [liub@MacBookPro OSI]$  dig +trace math.stackexchange.com
 
 ; <<>> DiG 9.8.3-P1 <<>> +trace math.stackexchange.com
@@ -215,12 +215,12 @@ stackexchange.com.	172800	IN	NS	ns-cloud-d2.googledomains.com.
 
 ## 7. NS 记录的查询
 dig命令可以单独查看每一级域名的NS记录。
-```shell
+```bash
 $ dig ns com
 $ dig ns stackexchange.com
 ```
 +short参数可以显示简化的结果。
-```shell
+```bash
 $ dig +short ns com
 $ dig +short ns stackexchange.com
 ```
@@ -251,7 +251,7 @@ CNAME记录主要用于域名的内部跳转，为服务器配置提供灵活性
 1. host 命令
 host命令可以看作dig命令的简化版本，返回当前请求域名的各种记录。
 
-	```shell
+	```bash
 	$ host github.com
 	
 	github.com has address 192.30.252.121
@@ -269,7 +269,7 @@ host命令可以看作dig命令的简化版本，返回当前请求域名的各�
 
 	host命令也可以用于逆向查询，即从IP地址查询域名，等同于dig -x <ip>。
 
-	```shell
+	```bash
 	$ host 192.30.252.153
 	
 	153.252.30.192.in-addr.arpa domain name pointer pages.github.com.
@@ -277,7 +277,7 @@ host命令可以看作dig命令的简化版本，返回当前请求域名的各�
 
 2. nslookup 命令
 	nslookup命令用于互动式地查询域名记录。
-	```shell
+	```bash
 	$ nslookup
 	
 	> facebook.github.io
@@ -293,7 +293,7 @@ host命令可以看作dig命令的简化版本，返回当前请求域名的各�
 	```
 3. whois 命令
 	whois命令用来查看域名的注册情况。
-	```shell
+	```bash
 	$ whois github.com
 	```
 

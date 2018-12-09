@@ -7,7 +7,7 @@ yum使用报错：
 ```
 
 第一个错误通过重装yum相关软件修复。操作如下：
-```shell
+```bash
 wget http://vault.centos.org/5.5/os/x86_64/CentOS/yum-3.2.22-26.el5.centos.noarch.rpm
 wget http://vault.centos.org/5.5/os/x86_64/CentOS/yum-security-1.1.16-14.el5.centos.1.noarch. rpm
 wget http://vault.centos.org/5.5/os/x86_64/CentOS/yum-metadata-parser-1.1.2-3.el5.centos.x86_ 64.rpm
@@ -24,19 +24,19 @@ yum clean all
 yum update
 ```
 但是又有新的报错：
-```shell
+```bash
 Error: Cannot retrieve repository metadata (repomd.xml) for repository: addons. Please verify its path and try again
 ```
 
 解决办法如下：
-```shell
+```bash
 rpm -import http://mirrors.163.com/centos/RPM-GPG-KEY-CentOS-5
 cd /etc/yum.repos.d/ Segmentation fault
 wget http://mirrors.163.com/.help/CentOS5-Base-163.repo
 ```
 
 修改文件（把所有 `$releasever` 替换成 `5`，保存）
-```shell
+```bash
 yum -y update
 ```
 但是仍然出现段错误

@@ -1,5 +1,5 @@
 # 更改Perl包的安装目录
-```shell
+```bash
 cd /usr/share/perl5/CPAN/
 ```
 修改`Config.pm`
@@ -13,7 +13,7 @@ cd /usr/share/perl5/CPAN/
 ```
 
 修改环境变量：
-```shell
+```bash
 export PERL5LIB=/panfs/dell/pub/perl_lib/lib/perl5:/panfs/dell/pub/perl_lib/lib/perl5/site_perl/5.10.1:/panfs/dell/pub/perl_lib/lib/perl5/sit
 e_perl/5.10.1/x86_64-linux-thread-multi/
 ```

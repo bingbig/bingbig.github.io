@@ -20,7 +20,7 @@ Linux内核为所有的PID名空间维护了一个树状结构：最顶层的是
 
 通过`ps`命令找到`dockerd`守护进程的`pid`：
 
-```shell
+```bash
 $ ps aux |grep dockerd
 gd        7483  0.0  0.0  11720  1840 pts/10   S+   17:40   0:00 grep --color=auto dockerd
 root      9317  0.1  0.2 1680284 41848 ?       Ssl  Aug16  51:19 /usr/bin/dockerd --raw-logs
@@ -28,7 +28,7 @@ root      9317  0.1  0.2 1680284 41848 ?       Ssl  Aug16  51:19 /usr/bin/docker
 
 然后通过`pstree` 查看进程的父子关系：
 
-```shell
+```bash
 $ pstree -p 9317
 dockerd(9317)-+-docker-containe(9343)-+-docker-containe(1043)-+-sh(1065)-+-cron(1078)
               |                       |                       |          `-gunicorn(1079)-+-gunicorn(1096)-+-{gunicorn}(15535)
@@ -74,7 +74,7 @@ dockerd(9317)-+-docker-containe(9343)-+-docker-containe(1043)-+-sh(1065)-+-cron(
 
 `docker inspect`查看容器信息
 
-```shell
+```bash
 $ docker inspect dockercontainer
 [
     {

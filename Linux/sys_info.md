@@ -2,7 +2,7 @@
 
 ## CPU
 
-```shell
+```bash
 dmidecode |grep -A16 "Memory Device"	# 可以看到CPU的个数
 cat /proc/cpuinfo						# 查看计算核心数
 ```
@@ -11,14 +11,14 @@ cat /proc/cpuinfo						# 查看计算核心数
 
 ## 内存条
 
-```shell
+```bash
 dmidecode |grep -A16 "Memory Device"	# 内存条硬件信息
 free -g									# 内存使用情况
 ```
 
 输出：
 
-```shell
+```bash
 Memory Device
 	Array Handle: 0x1000
 	Error Information Handle: Not Provided
@@ -43,13 +43,13 @@ Memory Device
 
 ## 主板
 
-```shell
+```bash
 dmidecode -t 2
 ```
 
 输出:
 
-```shell
+```bash
 # dmidecode 2.12
 SMBIOS 2.6 present.
 
@@ -64,13 +64,13 @@ Base Board Information
 
 ## 硬盘
 
-```shell
+```bash
 cat /proc/scsi/scsi		# 查看硬件信息， df -h 查看使用状态
 ```
 
 输出：
 
-```shell
+```bash
 Attached devices:
 Host: scsi0 Channel: 02 Id: 00 Lun: 00
   Vendor: DELL     Model: PERC H700        Rev: 2.10

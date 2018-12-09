@@ -41,7 +41,7 @@ var_dump([
 ```
 
 输出：
-```shell
+```bash
 bool(true)
 bool(true)
 bool(true)

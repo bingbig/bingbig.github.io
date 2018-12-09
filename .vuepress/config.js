@@ -12,12 +12,13 @@ module.exports = {
             {
                 text: '归档',
                 items: [
-                    {text: 'PHP', link: '/PHP/content'},
-                    {text: '网络', link: '/network/content'},
-                    {text: 'Linux', link: '/Linux/content'},
-                    {text: 'Docker', link: '/docker/content'},
-                    {text: '操作系统', link: '/OS/content'},
-                    { text: 'JavaScipt', link: '/JavaScript/content'}
+                    { text: 'PHP', link: '/PHP/content' },
+                    { text: '网络', link: '/network/content' },
+                    { text: 'Linux', link: '/Linux/content' },
+                    { text: 'Docker', link: '/docker/content' },
+                    { text: '操作系统', link: '/OS/content' },
+                    { text: 'JavaScipt', link: '/JavaScript/content' },
+                    { text: '数据库', link: '/Database/content' },
                 ]
             },
             {
@@ -103,8 +104,14 @@ module.exports = {
                 'XMLHttpRequest',
                 'React.js/React_webpack_babel_config'
             ],
+            '/Database/': [
+                'MySQL/basic',
+                'MySQL/leetcode',
+                'MySQL/optimization',
+                'Redis/Redis',
+            ],
             '/Bioinformatics/': [
-
+                
             ],
             '/': [
                 '',

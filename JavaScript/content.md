@@ -1,6 +1,6 @@
 ---
 prev: /OS/content
-next: /
+next: /Database/content
 ---
 # JavaScript
 

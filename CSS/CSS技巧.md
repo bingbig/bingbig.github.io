@@ -7,44 +7,45 @@
 这段代码会让你的彩色照片显示为黑白照片，是不是很酷？
 ```css
 img.desaturate {    
-         filter: grayscale(100%);    
-         -webkit-filter: grayscale(100%);    
-         -moz-filter: grayscale(100%);    
-         -ms-filter: grayscale(100%);    
-         -o-filter: grayscale(100%);
+	filter: grayscale(100%);    
+	-webkit-filter: grayscale(100%);    
+	-moz-filter: grayscale(100%);    
+	-ms-filter: grayscale(100%);    
+	-o-filter: grayscale(100%);
 }
 ```
 
 2. 使用 `:not()` 在菜单上应用/取消应用边框
 	先给每一个菜单项添加边框
-	```css
-	/* add border */
-	.nav li {  
-	     border-right: 1px solid #666;
-	}
-	```
-	……然后再除去最后一个元素……
-	```css
-	// remove border /
-	.nav li:last-child {
-	  border-right: none;
-	}
-	```
+```css
+/* add border */
+.nav li {  
+	border-right: 1px solid #666;
+}
+```
+……然后再除去最后一个元素……
+
+```css
+// remove border /
+.nav li:last-child {
+	border-right: none;
+}
+```
 	
-	可以直接使用 :not() 伪类来应用元素：
-	```css
-	.nav li:not(:last-child) {  
-	       border-right: 1px solid #666;
-	}
-	```
-	这样代码就干净，易读，易于理解了。
-	
-	当然，如果你的新元素有兄弟元素的话，也可以使用通用的兄弟选择符（~）：
-	```css
-	..nav li:first-child ~ li {  
-	         border-left: 1px solid #666;
-	}
-	```
+可以直接使用 :not() 伪类来应用元素：
+```css
+.nav li:not(:last-child) {  
+	      border-right: 1px solid #666;
+}
+```
+这样代码就干净，易读，易于理解了。
+
+当然，如果你的新元素有兄弟元素的话，也可以使用通用的兄弟选择符（~）：
+```css
+..nav li:first-child ~ li {  
+	        border-left: 1px solid #666;
+}
+```
 	
 3. 页面顶部阴影
 	下面这个简单的 CSS3 代码片段可以给网页加上漂亮的顶部阴影效果：

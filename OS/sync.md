@@ -72,7 +72,7 @@
 
 消息传递的实际功能通过一对原语实现：
 
-```shell
+```bash
 send(destination, message)
 receive(source, message)
 ```

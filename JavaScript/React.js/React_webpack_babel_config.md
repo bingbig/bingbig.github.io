@@ -69,7 +69,7 @@ module.exports = {
 
 ## 2. 安装React和antd
 
-```shell
+```bash
 npm -g install cnpm
 cnpm i
 ```
@@ -180,13 +180,13 @@ src/app.css
 
 1. 开发环境热加载
 
-   ```shell
+   ```bash
    npm run dev
    ```
 
 2. 生产环境
 
-    ```shell
+    ```bash
    npm run build
     ```
 
@@ -196,7 +196,7 @@ src/app.css
 
 ### 5.1 react-hot-loader Error
 
-```shell
+```bash
 ERROR in multi ./node_modules/_webpack-dev-server@2.7.1@webpack-dev-server/client?http://localhost:9000 babel-polyfill react-hot-loader/patch ./src/index.js
 Module not found: Error: Can't resolve 'react-hot-loader/patch' in '/Users/liub/Sites/liub1993.github.io/myapp'
  @ multi ./node_modules/_webpack-dev-server@2.7.1@webpack-dev-server/client?http://localhost:9000 babel-polyfill react-hot-loader/patch ./src/index.js
@@ -208,7 +208,7 @@ Module not found: Error: Can't resolve 'react-hot-loader/webpack' in '/Users/liu
 
 重新安装beta版本的react-hot-loader
 
-```shell
+```bash
 cnpm install react-hot-loader@next
 ```
 

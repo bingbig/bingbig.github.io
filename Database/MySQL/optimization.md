@@ -79,7 +79,7 @@
 
   使用`pt-duplicate-key-checker`工具检查重复及冗余索引
 
-  ```shell
+  ```bash
   pt-duplicate-key-checker -uroot -p '' -h 127.0.0.1
   ```
   mysql中目前只能通过慢查询日志配置`pt-index-usage`工具来进行索引使用情况分析。
@@ -110,7 +110,7 @@
 ## 数据库系统配置优化
 
 1. 网络配置，修改`/etc/sysctl.conf`
-  ```shell
+  ```bash
   #增加tcp支持的队列数
   net.ipv4.tcp_max_syn_backlog = 65535
   #减少断开连接时，资源回收
