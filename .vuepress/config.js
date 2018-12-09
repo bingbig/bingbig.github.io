@@ -1,5 +1,5 @@
 module.exports = {
-    title: 'Bing Docs',
+    title: 'Bing',
     description: '文档空间',
     markdown: {
         lineNumbers: true
