@@ -1,4 +1,4 @@
-# augustus 安装
+# 安装 augustus 
 
 > 下载：http://bioinf.uni-greifswald.de/augustus/binaries/augustus-3.3.tar.gz
 

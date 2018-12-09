@@ -1,6 +1,6 @@
 ---
 prev: /JavaScript/content
-next: /
+next: /Bioinformatics/content
 ---
 # 数据库
 

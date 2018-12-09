@@ -1,3 +1,6 @@
+# Convert ensemble gtf to gff3 for JBrowse
+
+```python
 #!/usr/bin/python
 """
 Convert ensemble gtf to gff3 for JBrowse
@@ -63,9 +66,4 @@ for line in gtf_lines:
 
 gff.close()
 gtf.close()
-
-
-
-	
-
-
+```

@@ -19,6 +19,7 @@ module.exports = {
                     { text: '操作系统', link: '/OS/content' },
                     { text: 'JavaScipt', link: '/JavaScript/content' },
                     { text: '数据库', link: '/Database/content' },
+                    { text: '生物信息', link: '/Bioinformatics/content' },
                 ]
             },
             {
@@ -39,6 +40,7 @@ module.exports = {
         ],
         sidebar: {
             '/PHP/': [
+                'content',
                 'basic',
                 'tips',
                 'sugs',
@@ -55,6 +57,7 @@ module.exports = {
                 'pattern/singleton'
             ],
             '/network/': [
+                'content',
                 'physical',
                 'DataLink',
                 'transport',
@@ -65,6 +68,7 @@ module.exports = {
                 'protocals'
             ],
             '/Linux/': [
+                'content',
                 'centos_ssh_login_too_slowly',
                 'centos5_yum_source',
                 'R730Linux_driver',
@@ -85,12 +89,14 @@ module.exports = {
                 'web_security',
             ],
             '/docker/': [
+                'content',
                 'command',
                 'dockerfile',
                 'network',
                 'container_process',
             ],
             '/OS/': [
+                'content',
                 'history',
                 'memory',
                 'process_thread',
@@ -98,6 +104,7 @@ module.exports = {
                 'sync',
             ],
             '/JavaScript/': [
+                'content',
                 'es6_import_jquery',
                 'js_deepcopy',
                 'js_tips',
@@ -105,13 +112,18 @@ module.exports = {
                 'React.js/React_webpack_babel_config'
             ],
             '/Database/': [
+                'content',
                 'MySQL/basic',
                 'MySQL/leetcode',
                 'MySQL/optimization',
                 'Redis/Redis',
             ],
             '/Bioinformatics/': [
-                
+                'content',
+                'softwares_install/easy_install',
+                'softwares_install/augustus',
+                'softwares_install/interproscan',
+                'scripts/gtf2gff3.md'
             ],
             '/': [
                 '',

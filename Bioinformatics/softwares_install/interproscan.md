@@ -1,4 +1,4 @@
-## 安装interproscan
+# 安装 interproscan
 
 **SFLD errors： https://github.com/ebi-pf-team/interproscan/wiki/KnownIssues**
 
