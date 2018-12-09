@@ -1,5 +1,6 @@
 ---
 home: true
+heroImage: https://avatars.githubusercontent.com/bingbig
 features:
 - title: 归档
   details: 我的一些总结和网络资料。
