@@ -38,11 +38,11 @@ module.exports = {
         ],
         sidebar: {
             '/PHP/': [
-                'PHP基础知识',
-                'PHP编程技巧与优化',
-                '安全建议',
+                'basic',
+                'tips',
+                'sugs',
                 'static',
-                'PHP路由技术和原理',
+                'router',
                 'composer',
                 'OOP/SRP',
                 'OOP/OCP',
@@ -51,7 +51,7 @@ module.exports = {
                 'OOP/DIP',
                 'OOP/abstract_class',
                 'Laravel/Container',
-                'pattern/单例模式'
+                'pattern/singleton'
             ],
             '/network/': [
                 'physical',

@@ -6,12 +6,12 @@ next: /OSI/content
 # PHP 目录
 
 ## 一些基础的笔记
-- [PHP基础知识](/PHP/PHP基础知识.md)
-- [PHP编程技巧与优化](/PHP/PHP编程技巧与优化.md)
-- [安全建议](/PHP/安全建议.md)
+- [PHP基础知识](/PHP/basic.md)
+- [PHP编程技巧与优化](/PHP/tips.md)
+- [安全建议](/PHP/sugs.md)
 - [Composer](/PHP/Composer.md)
 - [Static](/PHP/static.md)
-- [路由技术和原理](/PHP/路由技术和原理.md)
+- [路由技术和原理](/PHP/router.md)
 
 ## OOP
 - [抽象类](/PHP/OOP/abstract_class.md)
