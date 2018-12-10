@@ -1,5 +1,13 @@
 # 关于
 
-::: tip
-就职于新浪微博，欢迎访问我的[github](https://github.com/bingbig)，不过目前也没啥子东西。。。
+::: tip HELLO
+欢迎访问我的[github](https://github.com/bingbig)，不过目前也没啥子东西。。。
+:::
+
+::: danger 声明
+文档中的很多内容来自网络:
+1. 如果有版权问题，还请联系我删除！
+2. 如果有错误和建议，欢迎指正！
+
+请联系我： 📧 598604711@qq.com
 :::
