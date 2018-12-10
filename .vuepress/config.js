@@ -18,6 +18,7 @@ module.exports = {
             {
                 text: '归档',
                 items: [
+                    { text: 'C', link: '/clang/content' },
                     { text: 'PHP', link: '/PHP/content' },
                     { text: '网络', link: '/network/content' },
                     { text: 'Linux', link: '/Linux/content' },
@@ -45,6 +46,10 @@ module.exports = {
             { text: '关于', link: '/aboutme' }
         ],
         sidebar: {
+            '/clang/': [
+                'content',
+                'examples/byteorder',
+            ],
             '/PHP/': [
                 'content',
                 'basic',
