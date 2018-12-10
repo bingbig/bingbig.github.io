@@ -1,6 +1,12 @@
 module.exports = {
     title: 'Bing',
     description: '文档空间',
+    head: [
+        ['link', {
+            rel: 'icon',
+            href: 'https://avatars.githubusercontent.com/bingbig'
+        }]
+    ],
     markdown: {
         lineNumbers: true
     },
