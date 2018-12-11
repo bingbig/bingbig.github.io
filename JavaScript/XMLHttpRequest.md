@@ -2,14 +2,9 @@
 
 最近要封装GA4GH的API接口，先提前复习一下相关的知识。
 
-[source:
-
-1.  http://www.w3school.com.cn/xmldom/dom_http.asp
-2.  https://segmentfault.com/a/1190000004322487
-
-]
-
-
+> 参考
+> 1.  http://www.w3school.com.cn/xmldom/dom_http.asp
+> 2.  https://segmentfault.com/a/1190000004322487
 
 ## XMLHttpRequest的发展历程
 
