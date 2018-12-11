@@ -14,7 +14,7 @@
 
 所以呢，前端技术还是要去官方看最新的文档好啊。下面的配置用的是最新版本的webpack3。
 
-```javascript
+```js
 const path = require('path');
 
 module.exports = {
@@ -76,7 +76,7 @@ cnpm i
 
 只给配置不给packge.json告诉版本是耍流氓！
 
-```javascript
+```js
 {
   "name": "myapp",
   "version": "1.0.0",

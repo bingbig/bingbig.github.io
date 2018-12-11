@@ -171,7 +171,7 @@
 
 26. 禁止用户通过某个网卡发送数据
 
-    ```ssh
+    ```bash
     iptables -A OUTPUT -o ethX -m owner --uid-owner {USERNAME} -j DROP
     ```
 

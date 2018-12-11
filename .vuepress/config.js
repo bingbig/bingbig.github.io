@@ -13,37 +13,78 @@ module.exports = {
     themeConfig: {
         search: true,
         searchMaxSuggestions: 10,
-        nav: [
-            { text: '主页', link: '/' },
+        nav: [{
+                text: '主页',
+                link: '/'
+            },
             {
                 text: '归档',
-                items: [
-                    { text: 'C', link: '/clang/content' },
-                    { text: 'PHP', link: '/PHP/content' },
-                    { text: '网络', link: '/network/content' },
-                    { text: 'Linux', link: '/Linux/content' },
-                    { text: 'Docker', link: '/docker/content' },
-                    { text: '操作系统', link: '/OS/content' },
-                    { text: 'JavaScipt', link: '/JavaScript/content' },
-                    { text: '数据库', link: '/Database/content' },
-                    { text: '生物信息', link: '/Bioinformatics/content' },
+                items: [{
+                        text: 'C',
+                        link: '/clang/content'
+                    },
+                    {
+                        text: 'PHP',
+                        link: '/PHP/content'
+                    },
+                    {
+                        text: '网络',
+                        link: '/network/content'
+                    },
+                    {
+                        text: 'Linux',
+                        link: '/Linux/content'
+                    },
+                    {
+                        text: 'Docker',
+                        link: '/docker/content'
+                    },
+                    {
+                        text: '操作系统',
+                        link: '/OS/content'
+                    },
+                    {
+                        text: 'JavaScipt',
+                        link: '/JavaScript/content'
+                    },
+                    {
+                        text: '数据库',
+                        link: '/Database/content'
+                    },
+                    {
+                        text: '生物信息',
+                        link: '/Bioinformatics/content'
+                    },
                 ]
             },
             {
                 text: '专栏',
-                items: [
-                    { text: 'Redis', link: '/topic/redis/redis' },
-                    { text: '更多...', link: '/topic/centent' },
+                items: [{
+                        text: 'Redis',
+                        link: '/topic/redis/redis'
+                    },
+                    {
+                        text: '更多...',
+                        link: '/topic/centent'
+                    },
                 ]
             },
             {
                 text: '杂谈',
-                items: [
-                    { text: '谈谈Redis', link: '/gossip/redis/redis' },
-                    { text: '更多...', link: '/gossip/centent' },
+                items: [{
+                        text: '谈谈Redis',
+                        link: '/gossip/redis/redis'
+                    },
+                    {
+                        text: '更多...',
+                        link: '/gossip/centent'
+                    },
                 ]
             },
-            { text: '关于', link: '/aboutme' }
+            {
+                text: '关于',
+                link: '/aboutme'
+            }
         ],
         sidebar: {
             '/clang/': [
@@ -144,9 +185,9 @@ module.exports = {
         },
         lastUpdated: '最近更新', // string | boolean
         serviceWorker: {
-            updatePopup: { 
-               message: "您所看的内容有更新啦！", 
-               buttonText: "刷新" 
+            updatePopup: {
+                message: "您所看的内容有更新啦！",
+                buttonText: "刷新"
             }
         }
     }

@@ -2,7 +2,7 @@
 
 es6可以非常方便的通过import来导入js，那么如果调用jquery呢？
 
-```javascript
+```js
 import jQuery from 'jquery';
 import $ from 'jquery';
 import * as $ from 'jquery';
@@ -46,7 +46,7 @@ import * as jQuery from 'jquery';
 
 所以，引用jquery最好用:
 
-```javascript
+```js
 import jQuery from 'jquery';
 const $ = jQuery;
 ```
@@ -55,7 +55,7 @@ const $ = jQuery;
 
 如何import jquery-ui呢？
 
-```javascript
+```js
 import 'jquery-ui/ui/widgets/draggable';
 import 'jquery-ui/themes/base/draggable.css';
 ```
@@ -64,7 +64,7 @@ import 'jquery-ui/themes/base/draggable.css';
 
 如何在webpack环境下import font-awesome 呢？
 
-```javascript
+```js
 import 'font-awesome-webpack';
 ```
 
@@ -72,7 +72,7 @@ import 'font-awesome-webpack';
 
 `import`在导入文件时，会先执行文件，这个时候需要注意一些问题，比如说函数提升的问题，在过去定一个函数有时候会这么写：
 
-```javascript
+```js
 foo();
 foo = function() {
   console.log(foo);
@@ -81,7 +81,7 @@ foo = function() {
 
 在浏览器环境下，是不会报错的，但是，在import的时候第1行会出现`foo`没有定义，可能是因为import的函数提升机制没有像浏览器那么强大，可能仅仅只检查变量和函数便于按需导入而已。按照下面的写法就没有问题了：
 
-```javascript
+```js
 foo();
 function foo () {
   console.log(foo);

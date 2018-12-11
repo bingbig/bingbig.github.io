@@ -1,7 +1,7 @@
 # Javascript中的一种深复制实现
 [source: unknow]
 要实现深复制有很多办法，比如最简单的办法有：
-```javascript
+```js
 var cloneObj = JSON.parse(JSON.stringify(obj));
 ```
 上面这种方法好处是非常简单易用，但是坏处也显而易见，这会抛弃对象的`constructor`，也就是深复制之后，无论这个对象原本的构造函数是什么，在深复制之后都会变成`Object`。另外诸如`RegExp`对象是无法通过这种方式深复制的。
@@ -12,7 +12,7 @@ var cloneObj = JSON.parse(JSON.stringify(obj));
 1. 对于任何对象，它可能的类型有`Boolean`, `Number`, `Date`, `String`, `RegExp`, `Array` 以及 `Object`（所有自定义的对象全都继承于Object）
 2. 我们必须保留对象的构造函数信息（从而使新对象可以使用定义在`prototype`上的函数）
 	最重要的一个函数：
-	```javascript
+	```js
 	Object.prototype.clone = function () {
 		var Constructor = this.constructor;
 		var obj = new Constructor();
@@ -33,7 +33,7 @@ var cloneObj = JSON.parse(JSON.stringify(obj));
 	};
 ```
 定义在`Object.prototype`上的`clone()`函数是整个方法的核心，对于任意一个非js预定义的对象，都会调用这个函数。而对于所有js预定义的对象，如`Number`, `Array`等，我们就要实现一个辅助`clone()`函数来实现完整的克隆过程：
-```javascript
+```js
 	/* Method of Array */
 	Array.prototype.clone = function () {
 		var thisArr = this.valueOf();

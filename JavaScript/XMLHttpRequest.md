@@ -243,7 +243,7 @@ send(body)
 
 向一个==打开但未发送==的请求设置或者添加一个HTTP请求。
 
-```javascript
+```js
 setRequestHeader(name, value)
 ```
 
@@ -268,7 +268,7 @@ setRequestHeader(name, value)
 
 #### timeout
 
-```javascript
+```js
 xhr.timeout = 3000
 ```
 
@@ -343,7 +343,7 @@ function sendAjax() {
 
 ### 跟踪AJAX
 
-```javascript
+```js
 xhr.onreadystatechange = function () {
     switch(xhr.readyState){
       case 1://OPENED
@@ -369,7 +369,7 @@ xhr.onreadystatechange = function () {
 - 上传触发的是`xhr.upload`对象的 `onprogress`事件
 - 下载触发的是`xhr`对象的`onprogress`事件
 
-```javascript
+```js
 updateProgress = xhr.upload.onprogress;
 function updateProgress(event) {
     if (event.lengthComputable) {
