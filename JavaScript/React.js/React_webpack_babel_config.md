@@ -111,7 +111,7 @@ cnpm i
 
 .babelrc
 
-```javas
+```js
 {
   "presets": [ "es2016", "react" ],
   "plugins": ["react-hot-loader/babel"]
@@ -152,7 +152,7 @@ dist/index.html
 
 src/index.js
 
-```javas
+```js
 import './app.css';
 import _ from 'lodash';
 

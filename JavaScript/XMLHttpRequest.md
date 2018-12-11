@@ -207,7 +207,7 @@ interface XMLHttpRequest : XMLHttpRequestEventTarget {
 
 初始化HTTP请求参数，但是并不发送请求。
 
-```javasc
+```js
 open(method, url, async, username, password)
 ```
 
@@ -227,7 +227,7 @@ open(method, url, async, username, password)
 
 发送HTTP请求，使用传递给open()方法的参数，以及传递给该方法的可选请求体。
 
-```javasc
+```js
 send(body)
 ```
 
@@ -306,7 +306,7 @@ AJAX is based on the following open standards:
 
 ## 例子
 
-```javasc
+```js
 function sendAjax() {
   //构造表单数据
   var formData = new FormData();
