@@ -143,5 +143,11 @@ module.exports = {
             ],
         },
         lastUpdated: '最近更新', // string | boolean
+        serviceWorker: {
+            updatePopup: { 
+               message: "您所看的内容有更新啦！", 
+               buttonText: "刷新" 
+            }
+        }
     }
 }
