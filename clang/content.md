@@ -10,3 +10,4 @@ next: /PHP/content
 :::
 
 - [字节排序函数](examples/byteorder.md)
+- [readn、writen和readline函数](examples/readn-writen-readline.md)

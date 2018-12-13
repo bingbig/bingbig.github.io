@@ -90,6 +90,7 @@ module.exports = {
             '/clang/': [
                 'content',
                 'examples/byteorder',
+                'examples/readn-writen-readline',
             ],
             '/PHP/': [
                 'content',
