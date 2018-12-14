@@ -71,15 +71,7 @@ module.exports = {
             },
             {
                 text: '杂谈',
-                items: [{
-                        text: '谈谈Redis',
-                        link: '/gossip/redis/redis'
-                    },
-                    {
-                        text: '更多...',
-                        link: '/gossip/centent'
-                    },
-                ]
+                link: '/gossip/content'
             },
             {
                 text: '关于',
@@ -177,6 +169,10 @@ module.exports = {
                 'softwares_install/augustus',
                 'softwares_install/interproscan',
                 'scripts/gtf2gff3.md'
+            ],
+            '/gossip/' : [
+                'my-vscode-configuration',
+                'curl-multipart-form-data'
             ],
             '/': [
                 '',
