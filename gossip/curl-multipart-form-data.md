@@ -23,11 +23,11 @@ curl -X POST -H 'Content-Type: application/json' -d '{"username":"foo","password
 
 什么是`multipart/form-data`呢？又如何用cURL发送`multipart/form-data`请求呢？
 
-先说说表单的编码类型。表单的类型是通过属性`enctype`来决定，它有三种取值：
+先说说表单的编码类型。表单的类型是通过属性`enctype`来决定的，它有三种取值：
 
 - `application/x-www-form-urlencoded` 表示URL编码了的表单，是`enctype`的默认值，`enctype`取值无效时也取该值。
 - `multipart/form-data` 表示的是Multipart表单，当用户想上传文件时需要使用。
-- `text/plain` 是HTML5中新出现的一个表单类型，简单的发送数据，而不经过任何的编码。
+- `text/plain` 是HTML5中新出现的一个表单类型，只是简单的发送表单数据，而不经过任何的编码。
 
 ### URL编码表单
 我们来写一个表单来测试看。
@@ -54,7 +54,7 @@ curl -X POST -H 'Content-Type: application/json' -d '{"username":"foo","password
 
 ![url encode request](./assets/images/1-encode-url.png)
 
-URL编码其实就是一个由`name`和`value`构成的字符串，每个`name`和`value`之间通过`=`连接，`name`和`value`对和对之间通过`&` 连接，如：
+URL编码其实就是一个由`name`和`value`构成的字符串，每个`name`和`value`之间通过`=`连接，`name`、`value`对和对之间通过`&` 连接，如：
 
 ```
 key1=value1&key2=value2
@@ -62,7 +62,7 @@ key1=value1&key2=value2
 我们还可以发现请求URL中的参数和请求体中的数据是相似的。不同的是`sid sloth`中的`%20` 和  `+`。
 
 ### Multipart Forms
-Multipart Forms通常在我们上传文件是会用到，要想了解它是如何工作的，我们只需要把`enctype`的值修改为`multipart/form-data`。
+Multipart Forms通常在我们上传文件时用到，要想了解它是如何工作的，我们只需要把`enctype`的值修改为`multipart/form-data`。
 
 ```html
 <form action="/multipart?firstname=sid slayer&lastname=sloth" method="POST" enctype="multipart/form-data">
@@ -124,6 +124,7 @@ curl 'http://somesite/upload' \
 ```
 在`-d`参数后，我们用请求头中的`boundary`为分隔，写好了请求体，通过这种方式上传文件。
 
+要想了解cURL和服务器之间都发生了什么，我们可以加上  `--trace-ascii dump.log` 来获取完整的日志。
 
 ### 用cURL上传文件的简单方法
 其实用cURL上传文件很简单，只需要在文件路径的前面添加一个`@`：
