@@ -1,6 +1,4 @@
-#include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
+#include "unp.h"
 
 /**
  * Read n bytes from a decriptor
@@ -36,7 +34,7 @@ ssize_t readn(int fd, void *vptr, size_t n){
     return (n - nleft);
 }
 
-#ifndef main
+#ifndef __MY_TEST__
 #include <fcntl.h>
 int main()
 {

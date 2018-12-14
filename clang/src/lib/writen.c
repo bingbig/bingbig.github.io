@@ -1,6 +1,4 @@
-#include <unistd.h>
-#include <errno.h>
-#include <stdio.h>
+#include "unp.h"
 
 ssize_t writen(int fd, const void *vptr, size_t n)
 {
@@ -26,7 +24,7 @@ ssize_t writen(int fd, const void *vptr, size_t n)
     return n;
 }
 
-#ifndef main
+#ifndef __MY_TEST__
 #include <fcntl.h>
 int main()
 {

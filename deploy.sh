@@ -23,3 +23,5 @@ git push -f https://github.com/bingbig/bingbig.github.io.git master
 # git push -f git@github.com:<USERNAME>/<REPO>.git master:gh-pages
 
 cd -
+
+open https://bingbig.github.io

@@ -4,3 +4,4 @@ Bioinformatics/img/
 resumes/
 node_modules/
 .vuepress/dist/
+.vscode/
