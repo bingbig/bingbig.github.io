@@ -4,33 +4,8 @@
 >2. 将高序字节存储在起始地址，称为大端（big-endian）字节序。
 
 可以用C代码验证你的机器是哪种存储方式：
-```c
-#include <stdio.h>
 
-int main(int argc, char const *argv[])
-{
-    union 
-    {
-        short s;
-        char c[sizeof(short)];
-    } un;
-
-    un.s = 0x0102; /* 二进制为：100000010 */
-
-    if(sizeof(short) == 2){
-        if(un.c[0] == 1 && un.c[1] == 2)
-            printf("big-endian\n");
-        else if(un.c[0] == 2 && un.c[1] == 1)
-            printf("little-endian\n");
-        else
-            printf("unknown!\n");
-    }
-    else
-        printf("The short size is not 2!\n");
-    
-    return 0;
-}
-```
+<<<@/clang/src/lib/byteorder.c
 
 由于历史的原因和POSIX规范的规定，套接字地址结构中的某些字段必须按照网络字节序进行维护，因此我们要关注如何在主机字节序和网络字节序之间互相转换。这两种字节序之间的转换可以使用以下四个函数。
 
