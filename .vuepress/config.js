@@ -83,6 +83,7 @@ module.exports = {
                 'content',
                 'examples/byteorder',
                 'examples/readn-writen-readline',
+                'examples/tcp-socket',
             ],
             '/PHP/': [
                 'content',
