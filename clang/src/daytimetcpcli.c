@@ -1,5 +1,5 @@
+/* file: client.c */
 #include "lib/unp.h"
-
 
 int main(int argc, char const *argv[])
 {
@@ -9,7 +9,8 @@ int main(int argc, char const *argv[])
     struct in_addr in_val;
 
     if(argc != 2){
-        perror("usage: ./a.out <ip address>");
+        printf("usage: %s <ip address>\n", argv[0]);
+        exit(0);
     }
 
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)

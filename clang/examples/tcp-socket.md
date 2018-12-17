@@ -89,112 +89,49 @@ int close(int sockfd); /* 成功返回0， 出错则返回-1 */
 
 close一个TCP套接字的默认行为是把该套接字标记成已关闭，然后立即返回到调用进程，该套接字描述符不能再由调用的进程使用，也就是说它不能再作为read或write的第一个参数，然而TCP将尝试发送已排队等待发送到对端的任何数据，数据发送完毕后发送的是正常的TCP连接终止序列。
 
-## 例子
+## 示例：获取服务器时间的程序
 
-```c
-/* lib/unp.h */
+### 头文件
+<<<@/clang/src/lib/unp.h
 
-#include <stdio.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <arpa/inet.h>
+### 客户端程序
+<<< @/clang/src/daytimetcpcli.c
 
-/* Miscellaneous constants */
-#define MAXLINE 4096 /* max text line length */
+### 服务端程序
+<<<@/clang/src/daytimetcpsrv.c
 
-#define LISTENQ 1024 /* 2nd argument to listen() */
-```
-```c
-#include "lib/unp.h"
-
-
-int main(int argc, char const *argv[])
-{
-    int sockfd, n;
-    char recvline[MAXLINE + 1];
-    struct sockaddr_in servaddr;
-    struct in_addr in_val;
-
-    if(argc != 2){
-        perror("usage: ./a.out <ip address>");
-    }
-
-    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        perror("socket error");
-    
-    memset(&servaddr, 0, sizeof(servaddr));
-
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(8000);
-    servaddr.sin_addr.s_addr = inet_addr(argv[1]);
-
-    if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-    {
-        perror("connect error");
-    }
-    printf("connecting on %s:%hu\n", inet_ntop(AF_INET, &servaddr.sin_addr, recvline, sizeof(recvline)), ntohs(servaddr.sin_port));
-
-    while((n = read(sockfd, recvline, MAXLINE)) > 0){
-        recvline[n] = 0;
-        if(fputs(recvline, stdout) == EOF)
-            perror("fputs error");
-    }
-
-    if(n < 0) perror("read error");
-    return 0;
-}
-
+### 编译和运行
+```bash
+cc daytimetcpsrv.c -o server
+cc daytimetcpcli.c -o cli
+sudo ./server
+# 另外一个shell窗口，重复执行多次
+./cli 127.0.0.1
 ```
 
-```c
-#include "lib/unp.h"
-#include <time.h>
+服务端输出：
+```
+bingbig@macbook $ sudo ./server
+binding on 127.0.0.1:8000
+binding on 127.0.0.1:8000
+A client from 127.0.0.1:51436 connected in
+A client from 127.0.0.1:51437 connected in
+A client from 127.0.0.1:51438 connected in
+A client from 127.0.0.1:51439 connected in
+```
 
-int main(int argc, char const *argv[])
-{
-    int listenfd, connfd;
-    socklen_t len;
-    struct sockaddr_in servaddr, cliaddr;
-    char buff[MAXLINE];
-    time_t ticks;
-
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
-    memset(&servaddr, 0, sizeof(servaddr));
-
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    servaddr.sin_port = htons(8000);
-
-    if(bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-        perror("bind error");
-    char addr[MAXLINE];
-    printf("binding on %s:%hu\n", inet_ntop(AF_INET, &servaddr.sin_addr, addr, sizeof(addr)), ntohs(servaddr.sin_port));
-
-    if(listen(listenfd, LISTENQ) < 0)
-        perror("listen error");
-    
-    
-    for(;;)
-    {
-        len = sizeof(cliaddr);
-        connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &len);
-        if(connfd < -1) perror("accept error");
-
-        char addr[MAXLINE];
-        printf("A client from %s:%hu connected in \n", inet_ntop(AF_INET, &cliaddr.sin_addr, addr, sizeof(addr)), ntohs(cliaddr.sin_port));
-
-        ticks = time(NULL);
-        snprintf(buff, sizeof(buff), "%.24s\r\n", ctime(&ticks));
-        if(write(connfd, buff, strlen(buff)) < -1)
-            perror("write error");
-
-        close(connfd);
-    }
-    
-    return 0;
-}
+客户端输出：
+```
+bingbig@macbook $ ./cli 127.0.0.1
+connecting on 127.0.0.1:8000
+Mon Dec 17 22:18:07 2018
+bingbig@macbook $ ./cli 127.0.0.1
+connecting on 127.0.0.1:8000
+Mon Dec 17 22:18:09 2018
+bingbig@macbook $ ./cli 127.0.0.1
+connecting on 127.0.0.1:8000
+Mon Dec 17 22:18:10 2018
+bingbig@macbook $ ./cli 127.0.0.1
+connecting on 127.0.0.1:8000
+Mon Dec 17 22:18:10 2018
 ```
