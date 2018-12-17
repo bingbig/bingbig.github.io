@@ -135,3 +135,6 @@ bingbig@macbook $ ./cli 127.0.0.1
 connecting on 127.0.0.1:8000
 Mon Dec 17 22:18:10 2018
 ```
+:::tip
+在Mac上，可以通过`sudo lsof -nP -iTCP:端口号 -sTCP:LISTEN` 命令查看端口的占用情况。
+:::
