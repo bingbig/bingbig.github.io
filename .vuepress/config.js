@@ -82,6 +82,7 @@ module.exports = {
             '/clang/': [
                 'content',
                 'examples/byteorder',
+                'examples/intro',
                 'examples/readn-writen-readline',
                 'examples/tcp-socket',
             ],

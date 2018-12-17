@@ -10,6 +10,7 @@ next: /PHP/content
 :::
 
 - [字节排序函数](examples/byteorder.md)
+- [套接字编程简介](examples/intro.md)
 - [readn、writen和readline函数](examples/readn-writen-readline.md)
 - [readn、writen和readline函数](examples/readn-writen-readline.md)
 - [基本TCP套接字编程](examples/tcp-socket.md)
