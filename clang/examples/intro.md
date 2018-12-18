@@ -51,7 +51,7 @@ struct sockaddr_in6 {
 ```
 
 ## 字节操纵函数
-### 直接排序函数
+### 字节排序函数
 [请看上一篇文章](./byteorder.md)
 ### inet_aton、inet_addr和inet_ntoa函数
 ```c
