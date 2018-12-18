@@ -92,13 +92,30 @@ close一个TCP套接字的默认行为是把该套接字标记成已关闭，然
 ## 示例：获取服务器时间的程序
 
 ### 头文件
-<<<@/clang/src/lib/unp.h
+```c
+/* file: lib/unp.h */
+
+#include <stdio.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <arpa/inet.h>
+
+/* Miscellaneous constants */
+#define MAXLINE 4096 /* max text line length */
+
+#define LISTENQ 1024 /* 2nd argument to listen() */
+
+```
 
 ### 客户端程序
-<<< @/clang/src/daytimetcpcli.c
+<<< @/clang/src/daytime/daytimetcpcli.c
 
 ### 服务端程序
-<<<@/clang/src/daytimetcpsrv.c
+<<<@/clang/src/daytime/daytimetcpsrv.c
 
 ### 编译和运行
 ```bash
@@ -146,3 +163,4 @@ Mon Dec 17 22:18:10 2018
 int getsockname(int sockfd, struct sockaddr *localaddr, socklen_t *addrlen);
 int getpeername(int sockfd, struct sockaddr *peeraddr, socklen_t *addrlen);
 ```
+
