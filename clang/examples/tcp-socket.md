@@ -139,3 +139,10 @@ Mon Dec 17 22:18:10 2018
 - 在Mac上，可以通过`sudo lsof -nP -iTCP:端口号 -sTCP:LISTEN` 命令查看端口的占用情况。
 - 上面所列代码很多函数的使用忽略了错误的出现，实际开发需要处理错误。
 :::
+
+## getsockname和getpeername函数
+```c
+#include <sys/socket.h>
+int getsockname(int sockfd, struct sockaddr *localaddr, socklen_t *addrlen);
+int getpeername(int sockfd, struct sockaddr *peeraddr, socklen_t *addrlen);
+```
