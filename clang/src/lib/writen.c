@@ -25,12 +25,11 @@ ssize_t writen(int fd, const void *vptr, size_t n)
     return n;
 }
 
-#ifndef __MY_TEST__
-#include <fcntl.h>
-int main()
-{
-    int fh = open("./test.txt", O_RDWR | O_CREAT, 0777);
-    writen(fh, "those words should be writen in.\n", 34);
-    close(fh);
-}
-#endif
+
+// #include <fcntl.h>
+// int main()
+// {
+//     int fh = open("./test.txt", O_RDWR | O_CREAT, 0777);
+//     writen(fh, "those words should be writen in.\n", 34);
+//     close(fh);
+// }

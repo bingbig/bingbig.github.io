@@ -35,14 +35,13 @@ ssize_t readn(int fd, void *vptr, size_t n){
     return (n - nleft);
 }
 
-#ifndef __MY_TEST__
-#include <fcntl.h>
-int main()
-{
-    char ptr[200];
-    int fh = open("./test.txt", O_RDONLY, 0777);
-    readn(fh, ptr, 34);
-    close(fh);
-    printf("%s", ptr);
-}
-#endif
+
+// #include <fcntl.h>
+// int main()
+// {
+//     char ptr[200];
+//     int fh = open("./test.txt", O_RDONLY, 0777);
+//     readn(fh, ptr, 34);
+//     close(fh);
+//     printf("%s", ptr);
+// }

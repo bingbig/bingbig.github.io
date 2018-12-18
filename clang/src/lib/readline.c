@@ -59,19 +59,18 @@ ssize_t readlinebuf(void **vptrptr)
     return read_cnt;
 }
 
-#ifndef __MY_TEST__
-#include <fcntl.h>
 
-int main(int argc, char const *argv[])
-{
-    int fd = open("./byteorder.c", O_RDONLY);
-    size_t maxlen = 100;
-    char vptr[maxlen];
+// #include <fcntl.h>
+
+// int main(int argc, char const *argv[])
+// {
+//     int fd = open("./byteorder.c", O_RDONLY);
+//     size_t maxlen = 100;
+//     char vptr[maxlen];
     
-    ssize_t line = readline(fd, vptr, maxlen);
+//     ssize_t line = readline(fd, vptr, maxlen);
 
-    printf("%d", fd);
-    printf("%s", vptr);
-    return 0;
-}
-#endif
+//     printf("%d", fd);
+//     printf("%s", vptr);
+//     return 0;
+// }
