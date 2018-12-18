@@ -66,7 +66,12 @@ char *inet_ntoa(struct in_addr inaddr);	/* 返回一个指向点分十进制数�
 - inet_ntoa函数将一个32位的网络字节序二进制IPv4地址转换成相应的点分十进制数串，由该函数的返回值所指向的字符串驻留在静态内存中，这意味着该函数是不可重入的。该函数一个结构体而不是以指向该结构体的一个指针作为其参数。
 
 ### inet_pton和inet_ntop函数
+```c
+#include <arpa/inet.h>
 
+int inet_pton(int family, const char *strptr, void *addrptr); /* 返回：若成功返回1，出错返回-1 */
+const char *inet_ntop(int family, const void *addrptr, char *strptr, size_t len); /* 返回：若成功返回指向结果的指针，若出错返回 NULL */
+```
 ### sock_ntop函数
 ### readn、writen和readline函数
 字节流套接字上的read和write函数所表现的行为不同于通常的文件I/O。字节流套接字上调用read或write函数输入或输出的字节数可能会比请求的数量少，然而这不是bug，原因在于内核中用于套接字的缓冲区可能已经达到了极限，因此需要调用者再次调用read或write函数，以输入或输出剩余的字节。为了以防万一，可以封装这两个函数。
