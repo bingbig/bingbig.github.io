@@ -14,7 +14,8 @@ int main(int argc, char const *argv[])
     memset(&servaddr, 0, sizeof(servaddr));
 
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    // servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); /* 该方法已弃用 */
+    inet_aton("127.0.0.1", &servaddr.sin_addr);
     servaddr.sin_port = htons(8000);
 
     if(bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)

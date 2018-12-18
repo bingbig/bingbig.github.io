@@ -51,8 +51,22 @@ struct sockaddr_in6 {
 ```
 
 ## 字节操纵函数
+### 直接排序函数
+[请看上一篇文章](./byteorder.md)
 ### inet_aton、inet_addr和inet_ntoa函数
+```c
+#include <arpa/inet.h>
+int inet_aton(const char *strptr, struct in_addr *addrptr); /* 返回： 若字符串有效返回1，否则0 */
+in_addr_t inet_addr(const char *strptr); /* 返回：若字符串有效则返回32位的二进制网路字节序的IPv4地址，否则为`INADDR_NONE` */
+char *inet_ntoa(struct in_addr inaddr);	/* 返回一个指向点分十进制数串的指针 */
+```
+这几个函数在`点分十进制数串`(例如192.168.0.1)与它的长度为32位的`网络字节序二进制值`间转换IPv4地址。
+- inet_aton将strptr所指向的C字符串转换成一个32位的网络字节序二进制值。若成功则返回1，否则返回0。
+- inet_addr进行相同的转换，返回值为32位的网络字节学二进制值。但是该函数出错时返回`INADDR_NONE`常值（通常是一个32位均为1的值）。这意味着点分十进制数串255.255.255.255（这是IPv4的有限广播地址）不能由该函数处理，因为它的二进制值被用来指示该函数失败。（**如今inet_addr已被弃用，新的代码应该改用inet_aton函数**）
+- inet_ntoa函数将一个32位的网络字节序二进制IPv4地址转换成相应的点分十进制数串，由该函数的返回值所指向的字符串驻留在静态内存中，这意味着该函数是不可重入的。该函数一个结构体而不是以指向该结构体的一个指针作为其参数。
+
 ### inet_pton和inet_ntop函数
+
 ### sock_ntop函数
 ### readn、writen和readline函数
 字节流套接字上的read和write函数所表现的行为不同于通常的文件I/O。字节流套接字上调用read或write函数输入或输出的字节数可能会比请求的数量少，然而这不是bug，原因在于内核中用于套接字的缓冲区可能已经达到了极限，因此需要调用者再次调用read或write函数，以输入或输出剩余的字节。为了以防万一，可以封装这两个函数。
