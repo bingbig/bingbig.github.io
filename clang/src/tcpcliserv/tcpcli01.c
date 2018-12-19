@@ -12,16 +12,16 @@ int main(int argc, char const *argv[])
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
-        perror("socker error: ");
+        perror("socker error");
 
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(SERV_PORT);
     if(inet_pton(AF_INET, argv[1], &servaddr.sin_addr) < 0)
-        perror("inet_pton error: ");
+        perror("inet_pton error");
     
     if(connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr))<0)
-        perror("connect error: ");
+        perror("connect error");
     
     str_cli(stdin, sockfd);
     return 0;

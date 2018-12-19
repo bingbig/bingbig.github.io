@@ -48,37 +48,46 @@ void str_echo(int sockfd)
 again:
     while((n = read(sockfd, buf, MAXLINE)) > 0){
         if(writen(sockfd, buf, n) != n)
-            perror("writen error: ");
+            perror("writen error");
+        printf("[cli] %s", buf);
+        memset(buf, 0, MAXLINE);
     }
     if(n < 0 && errno == EINTR)
         goto again;
     else if (n < 0)
-        perror("str_echo: read_error: ");
+        perror("str_echo: read_error");
 }
 
 char * Fgets(char *ptr, int n, FILE *stream)
 {
     char *rptr;
-    if((rptr = fgets(ptr, n ,stream)) == NULL && ferror(stream))
-        perror("fgets error: ");
-    return ptr;
+    if((rptr = fgets(ptr, n, stream)) == NULL && ferror(stream)){
+        perror("fgets error");
+        exit(0);
+    }
+    return rptr;
 }
 void Fputs(const char *ptr, FILE *stream)
 {
     if(fputs(ptr, stream) == EOF)
-        perror("fputs error: ");
+        perror("fputs error");
 }
 
 
 void str_cli(FILE *fp, int sockfd)
 {
     char sendline[MAXLINE], recvline[MAXLINE];
+    Fputs("[server] ", stdout);
     while(Fgets(sendline, MAXLINE, fp) != NULL) {
         if(write(sockfd, sendline, strlen(sendline)) != strlen(sendline))
-            perror("write error:");
+            perror("write error");
         if (read(sockfd, recvline, MAXLINE) < 0)
             perror("str_cli: server terminated prematurely");
-
+        
+        Fputs("[server] ", stdout);
         Fputs(recvline, stdout);
+        Fputs(">>> ", stdout);
+        memset(sendline, '\0', MAXLINE);
+        memset(recvline, '\0', MAXLINE);
     }
 }
