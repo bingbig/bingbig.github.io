@@ -12,3 +12,4 @@ next: /PHP/content
 - [字节排序函数](examples/byteorder.md)
 - [套接字编程简介](examples/intro.md)
 - [基本TCP套接字编程](examples/tcp-socket.md)
+- [TCP 客户/服务器程序示例](examples/tcpcliserv.md)

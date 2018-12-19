@@ -1,5 +1,5 @@
-/* file: client.c */
-#include "lib/unp.h"
+/* file: src/daytime/client.c */
+#include "../lib/unp.h"
 
 int main(int argc, char const *argv[])
 {

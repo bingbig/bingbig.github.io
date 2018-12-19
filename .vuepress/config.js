@@ -84,6 +84,7 @@ module.exports = {
                 'examples/byteorder',
                 'examples/intro',
                 'examples/tcp-socket',
+                'examples/tcpcliserv',
             ],
             '/PHP/': [
                 'content',
