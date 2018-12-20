@@ -61,11 +61,11 @@ module.exports = {
                 text: '专栏',
                 items: [{
                         text: 'Redis',
-                        link: '/topic/redis/redis'
+                        link: '/topics/redis/content'
                     },
                     {
                         text: '更多...',
-                        link: '/topic/centent'
+                        link: '/topics/centent'
                     },
                 ]
             },
@@ -79,6 +79,9 @@ module.exports = {
             }
         ],
         sidebar: {
+            '/topics/': [
+                'redis/anet',
+            ],
             '/clang/': [
                 'content',
                 'examples/byteorder',
