@@ -26,8 +26,15 @@ int main(int argc, char const *argv[])
     for(;;) {
         cliaddr_len = sizeof(cliaddr);
         connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &cliaddr_len);
-        if(connfd < 0)
-            perror("accept error");
+        if (connfd < 0) {
+            if (errno == EINTR)
+                continue;
+            else {
+                perror("accept error");
+                exit(0);
+            }
+        }
+            
         
         childpid = fork();
         if(childpid < 0)

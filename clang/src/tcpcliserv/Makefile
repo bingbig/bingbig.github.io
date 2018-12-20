@@ -15,4 +15,4 @@ ser: tcpserv01.o
 all: clean cli ser
 	
 clean:
-	rm *.o cli ser
+	rm -rf *.o cli ser

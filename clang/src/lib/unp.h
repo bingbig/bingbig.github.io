@@ -77,7 +77,7 @@ void Fputs(const char *ptr, FILE *stream)
 void str_cli(FILE *fp, int sockfd)
 {
     char sendline[MAXLINE], recvline[MAXLINE];
-    Fputs("[server] ", stdout);
+    Fputs(">>> ", stdout);
     while(Fgets(sendline, MAXLINE, fp) != NULL) {
         if(write(sockfd, sendline, strlen(sendline)) != strlen(sendline))
             perror("write error");
