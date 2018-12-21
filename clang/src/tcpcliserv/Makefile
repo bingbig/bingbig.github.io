@@ -1,13 +1,13 @@
-tcpcli01.o: tcpcli01.c
+tcpcli02.o: tcpcli02.c
 	$(CC) -c $^
 
-tcpserv01.o: tcpserv01.c
+tcpserv02.o: tcpserv02.c
 	$(CC) -c $^
 
-cli: tcpcli01.o
+cli: tcpcli02.o
 	$(CC) $^ -o $@
 
-ser: tcpserv01.o
+ser: tcpserv02.o
 	$(CC) $^ -o $@
 
 .PHONY: all clean

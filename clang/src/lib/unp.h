@@ -45,8 +45,12 @@ void str_echo(int sockfd)
 {
     char        buf[MAXLINE];
     ssize_t     n;
+    long        arg1, arg2;
 again:
     while((n = read(sockfd, buf, MAXLINE)) > 0){
+        if(sscanf(buf, "%ld %ld", &arg1, &arg2) == 2){
+            snprintf(buf, sizeof(buf), "%ld\n", arg1 + arg2);
+        }
         if(writen(sockfd, buf, n) != n)
             perror("writen error");
         printf("[cli] %s", buf);

@@ -197,7 +197,7 @@ Signal(int signo, Sigfunc *func)	/* for our signal() function */
 3. 如果一个信号在被阻塞期间产生了一次或者多次，那么该信号被解除阻塞之后通常只递交一次。
 
 ### 处理SIGCHLD信号
-设置僵尸状态是为了维护子进程的信息，以便父进程在以后某个时候获取。这些信息包括子进程的进程ID、终止状态以及资源利用信息（CPU时间，内存使用量等等）。我们显然不愿意留在僵尸进程，为此我们的程序需要建立俘获SIGCHLD信号的信号处理函数。
+设置僵死状态是为了维护子进程的信息，以便父进程在以后某个时候获取。这些信息包括子进程的进程ID、终止状态以及资源利用信息（CPU时间，内存使用量等等）。我们显然不愿意留在僵死进程，为此我们的程序需要建立俘获SIGCHLD信号的信号处理函数。
 
 在我们的服务端程序中，我们必须在fork第一个子进程之前建立信号处理函数，通过调用：
 ```c
@@ -228,3 +228,82 @@ void sig_chld(int signo)
 connect函数不能被重启，必须重新调用！
 :::
 
+## wait和waitpid函数
+
+```c
+#include <sys/wait.h>
+pid_t wait(int *statloc);
+pid_t waitpid(pid_t pid, int *statloc, int options);
+/* 若成功，则返回进程ID，若出错则返回 0 或 -1 */
+```
+
+两个函数均返回两个值：已终止的进程的ID和通过statloc指针返回的子进程的终止状态（一个整数）。
+- 如果调用wait的进程没有已终止的子进程，不过有一个或多个子进程仍在执行，那么wait将阻塞到第一个子进程终止为止。
+- waitpid函数就等待哪个进程以及是否阻塞给了我们更多的控制。`pid`允许我们指定想要等待的进程ID，值-1表示等待第一个终止的子进程，最常用的选项是`WNOHANG`，它告知内核在没有已终止子进程时不要阻塞。
+
+## 进一步优化代码
+### 服务器端
+### 服务器程序
+<<<@/clang/src/tcpcliserv/tcpserv02.c{4-15,39,63}
+
+:::tip 注意
+本例中的`signal`函数调用的是系统的函数，而不是上面实现的。
+:::
+### 客户端程序
+<<<@/clang/src/tcpcliserv/tcpcli02.c{6,13-27}
+
+### 运行输出
+服务器输出
+```
+child 34314 connected.
+child 34315 connected.
+child 34316 connected.
+child 34317 connected.
+child 34318 connected.
+[cli] hello
+child 34318 terminated
+child 34317 terminated
+```
+
+客户输入输出
+```
+>>> hello
+[server] hello
+>>> %
+```
+
+随机测试几次发现，并不是所有的子进程的终止信号都能被捕获，还是会有子进程成为僵死进程。看来`waipid`并不能完全避免留下僵死进程。
+
+## 数据格式
+### 传递文本串
+在上面的例子中，我们直接将客户端发来的数据发回给客户端。我们更加关心客户和服务器之间的数据交换。
+
+#### 服务器两数求和
+我们希望客户端发送两个整数给服务器，而服务器返回两数之和。只需要修改`str_echo`方法：
+```c{5,8-10}
+void str_echo(int sockfd)
+{
+    char        buf[MAXLINE];
+    ssize_t     n;
+    long        arg1, arg2;
+again:
+    while((n = read(sockfd, buf, MAXLINE)) > 0){
+        if(sscanf(buf, "%ld %ld", &arg1, &arg2) == 2){
+            snprintf(buf, sizeof(buf), "%ld\n", arg1 + arg2);
+        }
+        if(writen(sockfd, buf, n) != n)
+            perror("writen error");
+        printf("[cli] %s", buf);
+        memset(buf, 0, MAXLINE);
+    }
+    if(n < 0 && errno == EINTR)
+        goto again;
+    else if (n < 0)
+        perror("str_echo: read_error");
+}
+```
+
+#### 传递二进制结构
+当客户端和服务端程序运行在字节序不一样或者所支持的长整型大小不一样的主机上是。工作将失常。穿越套接字传送二进制结构绝对是不明智的。解决这种数据格式问题有两种方法：
+- 把所有的数值数据作为文本串传递（假设客户端和服务端有相同的字符集）
+- 显示定义所支持的数据类型的二进制格式（位数，大小端字节序），并以这样的格式在客户端和服务端之间传递所有的数据。
