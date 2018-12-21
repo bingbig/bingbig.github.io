@@ -1,32 +1,9 @@
 # anet网络封装
 anet是Redis对TCP套接字网络操作的一个封装（Basic TCP socket stuff made a bit less boring）。在学过之前的[基本TCP套接字编程](/clang/examples/tcp-socket.md)后，我们接着来尝试解读Redis是如何封装基本的TCP套接字方法的。
 
-## 接口
+## 提供的接口
 ```c
-/* anet.c -- Basic TCP socket stuff made a bit less boring
- */
-
-#ifndef ANET_H
-#define ANET_H
-
-#include <sys/types.h>
-
-#define ANET_OK 0
-#define ANET_ERR -1
-#define ANET_ERR_LEN 256
-
-/* Flags used with certain functions. */
-#define ANET_NONE 0
-#define ANET_IP_ONLY (1<<0)
-
-#if defined(__sun) || defined(_AIX)
-#define AF_LOCAL AF_UNIX
-#endif
-
-#ifdef _AIX
-#undef ip_len
-#endif
-
+/* anet.c -- Basic TCP socket stuff made a bit less boring */
 int anetTcpConnect(char *err, char *addr, int port);
 int anetTcpNonBlockConnect(char *err, char *addr, int port);
 int anetTcpNonBlockBindConnect(char *err, char *addr, int port, char *source_addr);
@@ -54,35 +31,11 @@ int anetSockName(int fd, char *ip, size_t ip_len, int *port);
 int anetFormatAddr(char *fmt, size_t fmt_len, char *ip, int port);
 int anetFormatPeer(int fd, char *fmt, size_t fmt_len);
 int anetFormatSock(int fd, char *fmt, size_t fmt_len);
-
-#endif
 ```
 
 ## 实现
+### 错误处理
 ```c
-/* anet.c -- Basic TCP socket stuff made a bit less boring
- */
-
-#include "fmacros.h"
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
-#include <sys/time.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <netdb.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-
-#include "anet.h"
-
 static void anetSetError(char *err, const char *fmt, ...)
 {
     va_list ap;
@@ -92,24 +45,28 @@ static void anetSetError(char *err, const char *fmt, ...)
     vsnprintf(err, ANET_ERR_LEN, fmt, ap);
     va_end(ap);
 }
+```
+格式化错误信息，并保存到`err`指针所指的内存中。
 
+### 套接字描述符设置阻塞/非阻塞
+```c
 int anetSetBlock(char *err, int fd, int non_block) {
     int flags;
 
     /* Set the socket blocking (if non_block is zero) or non-blocking.
      * Note that fcntl(2) for F_GETFL and F_SETFL can't be
      * interrupted by a signal. */
-    if ((flags = fcntl(fd, F_GETFL)) == -1) {
+    if ((flags = fcntl(fd, F_GETFL)) == -1) {   /* F_GETFL: 读取文件状态标识 */
         anetSetError(err, "fcntl(F_GETFL): %s", strerror(errno));
         return ANET_ERR;
     }
 
     if (non_block)
-        flags |= O_NONBLOCK;
+        flags |= O_NONBLOCK; /* O_NONBLOCK: 非阻塞I/O; */
     else
         flags &= ~O_NONBLOCK;
 
-    if (fcntl(fd, F_SETFL, flags) == -1) {
+    if (fcntl(fd, F_SETFL, flags) == -1) {  /* F_SETFL: 设置文件状态标识 */
         anetSetError(err, "fcntl(F_SETFL,O_NONBLOCK): %s", strerror(errno));
         return ANET_ERR;
     }
@@ -123,18 +80,14 @@ int anetNonBlock(char *err, int fd) {
 int anetBlock(char *err, int fd) {
     return anetSetBlock(err,fd,0);
 }
+```
+通过fcntl实现对套接字描述符的阻塞和非阻塞操作。
 
+### KeepAlive设置
+```c
 /* Set TCP keep alive option to detect dead peers. The interval option
  * is only used for Linux as we are using Linux-specific APIs to set
  * the probe send time, interval, and count. */
-/* 
- * SO_KEEPALIVE：为了保持长连接。不论是服务端还是客户端，一方开启KeepAlive功能后，就会
- * 自动在规定时间内向对方发送心跳包， 而另一方在收到心跳包后就会自动回复，以告诉对方我仍然
- * 在线。 因为开启KeepAlive功能需要消耗额外的宽带和流量，所以TCP协议层默认并不开启
- * KeepAlive功能，尽管这微不足道，但在按流量计费的环境下增加了费用，另一方面，KeepAlive
- * 设置不合理时可能会因为短暂的网络波动而断开健康的TCP连接。 
- * sysctl -a | grep keepalive 查看系统设置
- */
 int anetKeepAlive(char *err, int fd, int interval)
 {
     int val = 1;
@@ -183,10 +136,16 @@ int anetKeepAlive(char *err, int fd, int interval)
 
     return ANET_OK;
 }
+```
+SO_KEEPALIVE：为了保持长连接。不论是服务端还是客户端，一方开启KeepAlive功能后，就会自动在规定时间内向对方发送心跳包， 而另一方在收到心跳包后就会自动回复，以告诉对方我仍然在线。 因为开启KeepAlive功能需要消耗额外的宽带和流量，所以TCP协议层默认并不开启KeepAlive功能，尽管这微不足道，但在按流量计费的环境下增加了费用，另一方面，KeepAlive 设置不合理时可能会因为短暂的网络波动而断开健康的TCP连接。 
 
+`sysctl -a | grep keepalive` 可查看系统的设置。
+
+### TCP设置是否有延迟
+```c
 static int anetSetTcpNoDelay(char *err, int fd, int val)
 {
-    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1) /* 启动TCP_NODELAY，就意味着禁用了Nagle算法，允许小包的发送。对于延时敏感型，同时数据传输量比较小的应用，开启TCP_NODELAY选项无疑是一个正确的选择。 */
+    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1)
     {
         anetSetError(err, "setsockopt TCP_NODELAY: %s", strerror(errno));
         return ANET_ERR;
@@ -203,8 +162,11 @@ int anetDisableTcpNoDelay(char *err, int fd)
 {
     return anetSetTcpNoDelay(err, fd, 0);
 }
+```
+启动TCP_NODELAY，就意味着禁用了Nagle算法，允许小包的发送。对于延时敏感型，同时数据传输量比较小的应用，开启TCP_NODELAY选项无疑是一个正确的选择。
 
-
+### 设置TCP数据发送缓冲区的大小
+```c
 int anetSetSendBuffer(char *err, int fd, int buffsize)
 {
     if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &buffsize, sizeof(buffsize)) == -1)
@@ -214,7 +176,10 @@ int anetSetSendBuffer(char *err, int fd, int buffsize)
     }
     return ANET_OK;
 }
+```
 
+### 设置TCP KEEPALIVE
+```c
 int anetTcpKeepAlive(char *err, int fd)
 {
     int yes = 1;
@@ -224,7 +189,10 @@ int anetTcpKeepAlive(char *err, int fd)
     }
     return ANET_OK;
 }
+```
 
+### 设置超时时间
+```c
 /* Set the socket send timeout (SO_SNDTIMEO socket option) to the specified
  * number of milliseconds, or disable it if the 'ms' argument is zero. */
 int anetSendTimeout(char *err, int fd, long long ms) {
@@ -238,7 +206,10 @@ int anetSendTimeout(char *err, int fd, long long ms) {
     }
     return ANET_OK;
 }
+```
 
+### 解析的泛型方法
+```c
 /* anetGenericResolve() is called by anetResolve() and anetResolveIP() to
  * do the actual work. It resolves the hostname "host" and set the string
  * representation of the IP address into the buffer pointed by "ipbuf".
@@ -280,7 +251,11 @@ int anetResolve(char *err, char *host, char *ipbuf, size_t ipbuf_len) {
 int anetResolveIP(char *err, char *host, char *ipbuf, size_t ipbuf_len) {
     return anetGenericResolve(err,host,ipbuf,ipbuf_len,ANET_IP_ONLY);
 }
+```
+可以根据条件解析host主机名或IPv4、IPv6地址。
 
+### 设置REUSEADDR
+```c
 static int anetSetReuseAddr(char *err, int fd) {
     int yes = 1;
     /* Make sure connection-intensive things like the redis benchmark
@@ -291,7 +266,11 @@ static int anetSetReuseAddr(char *err, int fd) {
     }
     return ANET_OK;
 }
+```
+确保redis benchmark可以打开/关闭套接字很多次。
 
+### 创建套接字
+```c
 static int anetCreateSocket(char *err, int domain) {
     int s;
     if ((s = socket(domain, SOCK_STREAM, 0)) == -1) { /* 套接字类型为SOCK_STREAM，支持的协议族包括AF_INET,AF_INET6和AF_LOCAL */
@@ -307,7 +286,11 @@ static int anetCreateSocket(char *err, int domain) {
     }
     return s;
 }
+```
+默认开启地址重用。`SO_REUSEADDR`选项告诉OS如果一个端口处于TIME_WAIT状态, 那么我们就不用等待直接进入使用模式, 不需要继续等待这个时间结束
 
+### 套接字连接
+```c
 #define ANET_CONNECT_NONE 0
 #define ANET_CONNECT_NONBLOCK 1
 #define ANET_CONNECT_BE_BINDING 2 /* Best effort binding. */
@@ -708,5 +691,4 @@ int anetFormatSock(int fd, char *fmt, size_t fmt_len) {
 
 :::tip 参考
 1. https://github.com/antirez/redis
-2. https://blog.csdn.net/Androidlushangderen/article/details/40503481
 :::
