@@ -84,10 +84,11 @@ module.exports = {
             ],
             '/clang/': [
                 'content',
-                'examples/byteorder',
-                'examples/intro',
-                'examples/tcp-socket',
-                'examples/tcpcliserv',
+                'unp/byteorder',
+                'unp/intro',
+                'unp/tcp-socket',
+                'unp/tcpcliserv',
+                'unp/io-multiplexing',
             ],
             '/PHP/': [
                 'content',
