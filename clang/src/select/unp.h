@@ -85,14 +85,16 @@ void Fputs(const char *ptr, FILE *stream)
 
 void str_cli(FILE *fp, int sockfd)
 {
-    int maxfdpl, n;
+    int maxfdpl, n, stdio_open;
     fd_set rset;
     char sendline[MAXLINE], recvline[MAXLINE];
-    
+
+    stdio_open = 1;
     FD_ZERO(&rset);
     for(;;)
     {
-        FD_SET(fileno(fp), &rset); /* fileno 函数把标准I/O文件指针转换成对应的描述符 */
+        if(stdio_open)
+            FD_SET(fileno(fp), &rset); /* fileno 函数把标准I/O文件指针转换成对应的描述符 */
         FD_SET(sockfd, &rset);
         maxfdpl = max(fileno(fp), sockfd) + 1;
         if((n = select(maxfdpl, &rset, NULL, NULL, NULL)) < 0){
@@ -113,9 +115,16 @@ void str_cli(FILE *fp, int sockfd)
             memset(recvline, '\0', MAXLINE);
         }
         /* 输入可读 */
-        if(FD_ISSET(sockfd, &rset)){
-            if(Fgets(sendline, MAXLINE, fp) == NULL)
-                return;
+        if(FD_ISSET(fileno(fp), &rset)){
+            if(read(sendline, MAXLINE, fp) == 0){
+                stdio_open = 0;
+                if((n = shutdown(sockfd, SHUT_WR)) < 0){
+                    perror("shutdown error");
+                    exit(1);
+                }
+                FD_CLR(fileno(fp), &rset);
+                continue;
+            }
             if (write(sockfd, sendline, strlen(sendline)) != strlen(sendline))
                 perror("write error");
         }
