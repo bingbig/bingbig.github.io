@@ -186,7 +186,7 @@ shutdown函数的行为依赖于参数`howto`：
 3. `SHUT_RDWR`: 连接的读半部和写半部都关闭。
 
 使用shutdown函数，我们再优化我们的代码：
-```c{3,7,11,12,34-42}
+```c
 void str_cli(FILE *fp, int sockfd)
 {
     int maxfdpl, n, stdio_open;
@@ -195,8 +195,8 @@ void str_cli(FILE *fp, int sockfd)
 
     stdio_open = 1;
     FD_ZERO(&rset);
-    for(;;)
-    {
+    
+    for(;;) {
         if(stdio_open)
             FD_SET(fileno(fp), &rset); /* fileno 函数把标准I/O文件指针转换成对应的描述符 */
         FD_SET(sockfd, &rset);
@@ -212,16 +212,15 @@ void str_cli(FILE *fp, int sockfd)
                 perror("str_cli: server terminated prematurely");
                 exit(1);
             }
-            Fputs("[server] ", stdout);
+
             Fputs(recvline, stdout);
-            Fputs(">>> ", stdout);
             memset(sendline, '\0', MAXLINE);
             memset(recvline, '\0', MAXLINE);
         }
         /* 输入可读 */
         if(FD_ISSET(fileno(fp), &rset)){
-            if(read(sendline, MAXLINE, fp) == 0){
-                stdio_open = 0;
+            if (read(fileno(fp), sendline, MAXLINE) == 0) {
+                stdio_open = 1;
                 if((n = shutdown(sockfd, SHUT_WR)) < 0){
                     perror("shutdown error");
                     exit(1);
@@ -229,13 +228,29 @@ void str_cli(FILE *fp, int sockfd)
                 FD_CLR(fileno(fp), &rset);
                 continue;
             }
-            if (write(sockfd, sendline, strlen(sendline)) != strlen(sendline))
+            if (write(sockfd, sendline, strlen(sendline)) != strlen(sendline)){
                 perror("write error");
+                exit(0);
+            }
+                
         }
     }
-}
+}   
 ```
-### 用select优化服务端代码
-```c
+:::tip 注意
+为了简单，没有封装read和write。
+:::
 
-```
+### 用select优化服务端代码
+<<<@/clang/src/select/tcpserv.c
+
+:::danger 拒绝服务攻击
+这个服务器仍然存在问题。如果有一个恶意的客户连接到该服务器，发送一个字节的数据（不是换行符），然后进入睡眠。服务器将调用read，它从客户端读取这一个字节的数据，然后阻塞于下一个read调用，以等待来自该客户端的其余数据。
+
+当服务器在处理多个客户时，它绝对不能阻塞于只与单个客户相关的某个函数调用，否则可能导致服务器被挂起，拒绝为所有其他用户提供服务，这就是所谓的`拒绝服务(denial of service)`型攻击。
+
+可能的解决办法：
+1. 使用非阻塞式的I/O
+2. 让每个客户由单独的控制线程提供服务
+3. 对I/O操作设置超时
+:::

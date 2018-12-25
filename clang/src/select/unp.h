@@ -91,8 +91,8 @@ void str_cli(FILE *fp, int sockfd)
 
     stdio_open = 1;
     FD_ZERO(&rset);
-    for(;;)
-    {
+    
+    for(;;) {
         if(stdio_open)
             FD_SET(fileno(fp), &rset); /* fileno 函数把标准I/O文件指针转换成对应的描述符 */
         FD_SET(sockfd, &rset);
@@ -108,16 +108,15 @@ void str_cli(FILE *fp, int sockfd)
                 perror("str_cli: server terminated prematurely");
                 exit(1);
             }
-            Fputs("[server] ", stdout);
+
             Fputs(recvline, stdout);
-            Fputs(">>> ", stdout);
             memset(sendline, '\0', MAXLINE);
             memset(recvline, '\0', MAXLINE);
         }
         /* 输入可读 */
         if(FD_ISSET(fileno(fp), &rset)){
-            if(read(sendline, MAXLINE, fp) == 0){
-                stdio_open = 0;
+            if (read(fileno(fp), sendline, MAXLINE) == 0) {
+                stdio_open = 1;
                 if((n = shutdown(sockfd, SHUT_WR)) < 0){
                     perror("shutdown error");
                     exit(1);
@@ -125,8 +124,11 @@ void str_cli(FILE *fp, int sockfd)
                 FD_CLR(fileno(fp), &rset);
                 continue;
             }
-            if (write(sockfd, sendline, strlen(sendline)) != strlen(sendline))
+            if (write(sockfd, sendline, strlen(sendline)) != strlen(sendline)){
                 perror("write error");
+                exit(0);
+            }
+                
         }
     }
 }   

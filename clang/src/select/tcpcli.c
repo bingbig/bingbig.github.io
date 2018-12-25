@@ -1,5 +1,5 @@
-/* file: src/tcpcliserv/tcpcli01.c */
-#include "../lib/unp.h"
+/* file: src/select/tcpcli01.c */
+#include "./unp.h"
 
 int main(int argc, char const *argv[])
 {
