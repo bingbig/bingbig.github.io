@@ -254,3 +254,47 @@ void str_cli(FILE *fp, int sockfd)
 2. 让每个客户由单独的控制线程提供服务
 3. 对I/O操作设置超时
 :::
+
+
+## poll函数
+
+```c
+#include <poll.h>
+int poll(struct pollfd *fdarray, unsigned long nfds, int timeout);
+/* 返回：若有就绪描述符，返回其数目，若超时则为0， 若出错则返回 -1 */
+```
+
+第一个参数是指向一个结构体数组的指针，每个数组都是一个pollfd结构，用于指定测试某个给定描述符fd的条件。
+```c
+struct pollfd {
+    int     fd;         /* 测试描述符 */
+    short   events;     /* fd上要测试的事件 */
+    short   revents;    /* 发生在fd上的事件 */
+}
+```
+:::tip 事件
+#### 事件 events
+- POLLIN 有数据可读
+- POLLRDNORM 有普通数据可读
+- POLLRDBAND 有优先数据可读
+- POLLPRI 有紧急数据可读
+- POLLOUT 数据可写
+- POLLWRNORM 普通数据可写
+- POLLWRBAND 优先数据可写
+- POLLMSGSIGPOLL 消息可用 
+#### 返回事件 revent 
+**除了事件外，还有**
+- POLLERR 指定描述符发生错误
+- POLLHUP 指定文件描述符挂起事件
+- POLLNVAL 指定描述符非法
+:::
+
+就TCP和UDP套接字而言，以下条件引起poll返回特定的revent：
+- 所有正规的TCP数据和所有的UDP数据都被认为是普通数据。
+- TCP的带外数据被认为是优先级带数据。
+- 当TCP连接的读半部关闭时，也被认为是普通数据，随后的读操作将返回0。
+- TCP连接存在错误既可以认为是普通数据，也可以认为是错误。随后的读操作都将返回-1，并把errno设置合适的值。
+- 在监听套接字上有新的连接可以用既可认为是普通数据，也可认为是优先级数据，大多数实现视之为普通数据。
+- 非阻塞式connect的完成被人视为是使相应的套接字可写。
+
+结构体数组中的元素的格式由参数`nfds`指定。
