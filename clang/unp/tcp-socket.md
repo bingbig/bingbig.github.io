@@ -49,7 +49,7 @@ int connect(int sockfd, const struct sockaddr *servadder, socklen_t addrlen); /*
 
 ```c
 #include <sys/socket.h>
-int bind(int sockfd, const struct sockaddr *myaddr, socklen_r addlen); /* 若成功则为0，出错返回 -1 */
+int bind(int sockfd, const struct sockaddr *myaddr, socklen_t addlen); /* 若成功则为0，出错返回 -1 */
 ```
 
 服务器进程在启动时捆绑它们的众所周知的端口，而客户端则由内核自动分配一个临时端口，不需要调用bind函数。
