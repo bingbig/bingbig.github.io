@@ -42,7 +42,7 @@ int unpSocket(int family, int type, int protocol)
     return n;
 }
 
-void unpConnect(int sockfd, const struct *sa, socklen_t sa_len)
+void unpConnect(int sockfd, const struct sockaddr *sa, socklen_t sa_len)
 {
     if (connect(sockfd, sa, sa_len) < 0)
         err_sys("connect error");
@@ -60,7 +60,7 @@ void unpListen(int sockfd, int backlog)
         err_sys("listen error");
 }
 
-int unpAccept(int sockfd, struct sockaddr *cliaddr, socklen_t addr_len)
+int unpAccept(int sockfd, struct sockaddr *cliaddr, socklen_t *addr_len)
 {
     int n;
     n = accept(sockfd, cliaddr, addr_len);

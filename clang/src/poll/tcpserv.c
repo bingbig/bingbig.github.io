@@ -3,10 +3,11 @@
 
 int main(int argc, char const *argv[])
 {
-    int i, maxi, listenfd, connfd, nready, sockfd;
+    int i, maxi, listenfd, connfd, nready, sockfd, n;
     struct sockaddr_in cli_addr, ser_addr;
     struct pollfd clients[OPEN_MAX];
     socklen_t cli_len;
+    char buf[MAXLINE];
 
     listenfd = unpSocket(AF_INET, SOCK_STREAM, 0);
     
@@ -30,9 +31,10 @@ int main(int argc, char const *argv[])
         nready = unpPoll(clients, maxi+1, INFTIM);
         /* 处理监听套接字事件 */
         if(clients[0].revents & POLLRDNORM){
-            connfd = unpAccept(listenfd, (struct sockaddr *)&cli_addr, cli_len);
+            connfd = unpAccept(listenfd, (struct sockaddr *)&cli_addr, &cli_len);
             for(i=1;i<OPEN_MAX;i++){
                 if(clients[i].fd < 0){
+                    printf("clients[%d] connected in\n", i);
                     clients[i].fd = connfd;
                     break;
                 }
@@ -51,7 +53,28 @@ int main(int argc, char const *argv[])
         for(i=1;i<=maxi;i++){
             if((sockfd = clients[i].fd) < 0)
                 continue;
-            
+            if (clients[i].revents & (POLLRDNORM | POLLERR))
+            {
+                if ((n = read(sockfd, buf, MAXLINE)) == -1) {
+                    if(errno == ECONNRESET){
+                        printf("client[%d] aborted connection\n", i);
+                        unpClose(clients[i].fd);
+                        clients[i].fd = -1;
+                    }
+                    else {
+                        err_sys("read error");
+                    }
+                } else if(n == 0){
+                    printf("client[%d] closed connection\n", i);
+                    unpClose(clients[i].fd);
+                    clients[i].fd = -1;
+                } else {
+                    unpWrite(sockfd, buf, n);
+                }
+
+                if(--nready <= 0)
+                    break;
+            }
         }
     }
 
