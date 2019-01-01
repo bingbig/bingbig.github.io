@@ -128,3 +128,35 @@ write函数将`buf`中的数据写入`fd`所指向的文件中，并且最多`co
 ::: danger 注意
 readline使用静态变量实现跨相继函数调用的状态信息维护，其结果是这些函数变得不可重入或者说非线性安全了。之后会有新的版本来代替。
 :::
+
+
+## 套接字选项
+### getsockopt和setsockopt函数
+```c
+#include <sys/socket.h>
+
+int getsockopt(int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+
+/* 若成功，均返回0，出错返回-1 */
+```
+
+其中sockfd必须指向一个打开的套接字描述符，level指定系统中解释选项的代码或者为通用套接字代码，或者为某个特定于协议的代码（如SOL_SOCKET,IPROTO_IP等）。
+
+optval是指向某个变量的指针，setsockopt从optval中取得optname选项的待设置新值，getsockopt则把optname选项的已有值保存到optval中。
+
+套接字选项的使用示例可以查看redis的网络相关的源码——[anet](/topics/redis/anet.md)。
+
+## fcntl函数
+与代表“file control”的名字相符，fcntl函数提供了与网络编程相关的如下特性：
+- 非阻塞I/O。通过使用`F_SETFL`命令设置`O_NONBLOCK`文件状态标志，我们可以把一个套接字设置为非阻塞型。
+- 信号驱动式I/O。通过使用`F_SETFL`命令设置`O_ASYNC`文件状态标识，我们可以把一个套接字设置成一旦其状态发生变化，内核就产生一个`SIGIO`信号。
+- `F_SETOWN`命令允许我们指定用于接收`SIGIO`和`SIGURG`信号的套接字属主（进程ID或进程组ID）。其中`SIGIO`信号是套接字被设置为信号驱动式I/O型后产生的，`SIGURG`信号是在新的带外数据到达套接字时产生的。`F_GETOWN`命令返回套接字的当前属主。
+
+```c
+#include <fcntl.h>
+
+int fcntl(int fd, int cmd, .../* int arg */);		/* 成功返回取决于cmd，出错返回 -1 */
+```
+
+fcntl函数的简单用法示例可参考redis源码 —— [anet:套接字描述符设置阻塞-非阻塞](/topics/redis/anet.html#套接字描述符设置阻塞-非阻塞)。
