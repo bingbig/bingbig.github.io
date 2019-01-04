@@ -5,7 +5,7 @@ int main(int argc, char const *argv[])
     int sockfd;
     struct sockaddr_in servaddr, cliaddr;
 
-    sockfd = Socket(AF_INET, SOCK_DGRAM, 0);
+    sockfd = Socket(AF_INET, SOCK_DGRAM, 0); /* 数据报套接字 */
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(SERV_UDP_PORT);
