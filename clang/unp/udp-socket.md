@@ -11,7 +11,7 @@ ssize_t sendto(int sockfd, const void *buff, size_t nbytes, int flags, struct so
 /* 若成功返回读/写的字节数，若失败则返回 -1 */
 ```
 
-前三个参数分别是描述符，输入/读入缓冲区，以及读写的字节数。flags参数之后讨论，先设置为0，from和to是发送者和接受者的套接字地址结构。
+前三个参数分别是描述符，输入/读入缓冲区，以及读写的字节数。flags参数之后讨论，先设置为0，from和to是发送者和接收者的套接字地址结构。
 
 写一个长度为0的数据报是可行的。UDP不像TCP套接字上read返回0值表示对端已关闭连接，recvfrom返回0是可以接受的，因为UDP是无连接的，因此也没有关闭UDP之类的事情。
 
@@ -133,14 +133,14 @@ void dg_cli(FILE *fp, int sockfd, struct sockaddr *pservaddr, socklen_t servlen)
 相对于未连接UDP套接字，已连接套接字发生了以下变化：
 > 1. 不能再给输出操作指定目的IP和端口号
 
-也就是说我们不适用sendto，而是改为write或send。写到UDP套接字上的任何内容都自动发送到connect指定的协议地址。
+也就是说我们不使用sendto，而是改为write或send。写到UDP套接字上的任何内容都自动发送到connect指定的协议地址。
 
 > 2. 不必使用recvfrom获悉数据报的发送者，而改用read、recv或recvmsg
 
 > 3. 由已连接UDP套接字引发的异步错误会返回给他们所在的进程，而未连接UDP套接字不会接收任何异步错误。
 
 ### 性能比较
-在一个未连接的UDP套接字上调用sendto发送两个数据报内核会执行下列6个步骤”
+在一个未连接的UDP套接字上调用sendto发送两个数据报内核会执行下列6个步骤：
 1. 连接套接字（可能需要搜索路由）
 2. 输出第一个数据报
 3. 断开套接字
@@ -155,10 +155,174 @@ void dg_cli(FILE *fp, int sockfd, struct sockaddr *pservaddr, socklen_t servlen)
 
 在这种情况下，内核只需要复制一次含有目的IP地址和端口号的套接字地址结构。临时连接未连接套接字大约会耗费每个UDP传输三分之一的开销。
 
+#### 修改客户端程序为连接UDP套接字
+```c{76-114,147-165}
+/* file:src/udpcliserv/02/unp.h */
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <stdio.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
+#define SERV_UDP_PORT 8765
+#define BUFF_SIZE 10
 
+void err_sys(const char *x)
+{
+    perror(x);
+    exit(1);
+}
 
+void Inet_pton(int family, const char *strptr, void *addrptr)
+{
+    if (inet_pton(family, strptr, addrptr) < 0)
+        err_sys("inet_pton error");
+}
 
+char *Fgets(char *buff, int bytes, FILE *fp)
+{
+    char *rbuff;
+    if ((rbuff = fgets(buff, bytes, fp)) == NULL && ferror(fp))
+        err_sys("fgets error");
+    return buff;
+}
 
+void Fputs(const char *ptr, FILE *stream)
+{
+    if (fputs(ptr, stream) == EOF)
+        err_sys("fputs error");
+}
+
+int Socket(int family, int type, int protocol)
+{
+    int n;
+    n = socket(family, type, protocol);
+    
+    if(n < 0)
+        err_sys("create socket error");
+    return n;
+}
+
+int Bind(int sockfd, const struct sockaddr *servaddr, socklen_t addrlen)
+{
+    int n;
+    n = bind(sockfd, servaddr, addrlen);
+    if(n < 0)
+        err_sys("bind error");
+
+    return n;
+}
+
+ssize_t Recvfrom(int sockfd, void *buff, size_t nbytes, int flags, struct sockaddr *from, socklen_t *addrlen)
+{
+    ssize_t n;
+    n = recvfrom(sockfd, buff, nbytes, flags, from, addrlen);
+    if(n < 0)
+        err_sys("recvfrom error");
+    
+    return n;
+}
+
+void Sendto(int sockfd, void *buff, size_t nbytes, int flags, struct sockaddr *to, socklen_t addrlen)
+{
+    if(sendto(sockfd, buff, nbytes, flags, to, addrlen) != (ssize_t) nbytes)
+        err_sys("sendto error");
+}
+
+void Connect(int sockfd, const struct sockaddr *servadder, socklen_t addrlen)
+{
+    if (connect(sockfd, servadder, addrlen) < 0)
+        err_sys("connect error");
+}
+
+ssize_t Write(int fd, char *buf, size_t count)
+{
+    size_t nwritten,total_written = 0;
+    while (total_written != count)
+    {
+        nwritten = write(fd, buf, count - total_written);
+        if (nwritten == -1)
+            err_sys("write error");
+        if (nwritten == 0)
+            return total_written;
+        total_written += nwritten;
+        buf += nwritten;
+    }
+
+    return total_written;
+}
+
+ssize_t Read(int fd, char *buf, size_t count)
+{
+    size_t nread, read_total = 0;
+    
+    while(read_total != count)
+    {
+        nread = read(fd, buf, count-read_total);
+        if(nread == -1)
+            err_sys("read error");
+        if(nread == 0)
+            return read_total;
+        read_total += nread;
+        buf += nread;
+    }
+    return read_total;
+}
+
+void dg_echo(int sockfd, struct sockaddr *pcliaddr, socklen_t clilen)
+{
+    ssize_t n;
+    socklen_t len;
+    char msg[BUFF_SIZE];
+    
+    while(1){
+        bzero(&msg, BUFF_SIZE);
+        len = clilen;
+        n = Recvfrom(sockfd, msg, BUFF_SIZE, 0, pcliaddr, &len);
+        Fputs(msg, stdout);
+        Sendto(sockfd, msg, n, 0, pcliaddr, len);
+    }
+}
+
+char *Sock_ntop(const struct sockaddr *addrptr, char *str, size_t len)
+{
+    char portstr[8];
+    struct sockaddr_in *addr = (struct sockaddr_in *) addrptr;
+
+    if (inet_ntop(AF_INET, &addr->sin_addr, str, len) == NULL)
+        err_sys("Sock_ntop error");
+
+    if (ntohs(addr->sin_port) != 0)
+    {
+        snprintf(portstr, sizeof(portstr), ":%d", ntohs(addr->sin_port));
+        strcat(str, portstr);
+    }
+    return str;
+}
+
+void dg_cli(FILE *fp, int sockfd, struct sockaddr *pservaddr, socklen_t servlen)
+{
+    int n;
+    char sendline[BUFF_SIZE], recvline[BUFF_SIZE+1];
+
+    Connect(sockfd, (struct sockaddr *) pservaddr, servlen);
+
+    while(Fgets(sendline, BUFF_SIZE, fp)){
+        Write(sockfd, sendline, strlen(sendline));
+
+        n = Read(sockfd, recvline, strlen(sendline)); /* 读取字节数不能超过发送字节数，否则阻塞在read上 */
+
+        recvline[n] = 0;
+        Fputs(recvline, stdout);
+
+        bzero(&sendline, BUFF_SIZE);
+        bzero(&recvline, BUFF_SIZE+1);
+    }
+}
+```
+<<<@/clang/src/udpcliserv/02/udpcli.c
 
 ## 使用select函数的TCP和UDP回射服务器程序
