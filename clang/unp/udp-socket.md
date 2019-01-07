@@ -325,4 +325,9 @@ void dg_cli(FILE *fp, int sockfd, struct sockaddr *pservaddr, socklen_t servlen)
 ```
 <<<@/clang/src/udpcliserv/02/udpcli.c
 
-## 使用select函数的TCP和UDP回射服务器程序
+## UDP套接字接收缓冲区
+在FreeBSD下UDP套接字接收缓冲区的默认大小为42,080字节，可以通过`setsockopt`函数设置其大小。如下：
+```c
+int n = 220 * 1024;
+setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, sizeof(n));
+```
