@@ -81,7 +81,7 @@ void Connect(int sockfd, const struct sockaddr *servadder, socklen_t addrlen)
 ssize_t Write(int fd, char *buf, size_t count)
 {
     size_t nwritten,total_written = 0;
-    while (nwritten != count)
+    while (total_written != count)
     {
         nwritten = write(fd, buf, count - total_written);
         if (nwritten == -1)
@@ -91,7 +91,7 @@ ssize_t Write(int fd, char *buf, size_t count)
         total_written += nwritten;
         buf += nwritten;
     }
-    
+
     return total_written;
 }
 
@@ -109,7 +109,6 @@ ssize_t Read(int fd, char *buf, size_t count)
         read_total += nread;
         buf += nread;
     }
-    
     return read_total;
 }
 
@@ -154,7 +153,7 @@ void dg_cli(FILE *fp, int sockfd, struct sockaddr *pservaddr, socklen_t servlen)
     while(Fgets(sendline, BUFF_SIZE, fp)){
         Write(sockfd, sendline, strlen(sendline));
 
-        n = Read(sockfd, recvline, BUFF_SIZE);
+        n = Read(sockfd, recvline, strlen(sendline)); /* 读取字节数不能超过发送字节数，否则阻塞在read上 */
 
         recvline[n] = 0;
         Fputs(recvline, stdout);
