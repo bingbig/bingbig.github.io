@@ -90,6 +90,7 @@ module.exports = {
                 'unp/tcpcliserv',
                 'unp/io-multiplexing',
                 'unp/udp-socket',
+                'unp/names'
             ],
             '/PHP/': [
                 'content',
