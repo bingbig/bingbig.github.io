@@ -49,3 +49,8 @@ struct hostent {
 ```
 
 gethostbyname发生错误时，它不设置errno变量，而是将全局整数变量h_errno设置为定义在<netdb.h>中的下列常值：`HOST_NOT_FOUND`, `TRY_AGAIN`, `NO_RECOVERY`, `NO_DATA`（等同于`NO_ADDRESS`）。
+
+### 例子
+<<<@/clang/src/names/unp.c
+<<<@/clang/src/names/hostent.c
+
