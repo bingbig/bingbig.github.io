@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <arpa/inet.h>
 
 #define MAX_BUFF_SIZE   1024
 
