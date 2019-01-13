@@ -50,6 +50,25 @@ struct sockaddr_in6 {
 }
 ```
 
+### 新的通用套接字地址结构
+新的通用套接字`struct sockaddr_storage`足以容纳系统所支持的任何套接字地址结构。
+```c
+#include <netinet/in.h>
+
+struct sockaddr_storage {
+	unit8_t			ss_len; /* 结构体的长度 */
+	sa_family_t		ss_family; /* 地址族： AF_XXX 值 */
+
+	/*
+	 * implementation-dependent elements to provide:
+	 * a) alignment sufficient to fulfill the alignment requirements 
+	 *    of all socket address types that the system supports;
+	 * b) enough storage to hold any type of socket address that the
+	 *    system supports.
+	 */
+}
+```
+
 ## 字节操纵函数
 ### 字节排序函数
 [请看上一篇文章](./byteorder.md)
