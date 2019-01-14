@@ -13,7 +13,7 @@ ssize_t sendto(int sockfd, const void *buff, size_t nbytes, int flags, struct so
 
 前三个参数分别是描述符，输入/读入缓冲区，以及读写的字节数。flags参数之后讨论，先设置为0，from和to是发送者和接收者的套接字地址结构。
 
-写一个长度为0的数据报是可行的。UDP不像TCP套接字上read返回0值表示对端已关闭连接，recvfrom返回0是可以接受的，因为UDP是无连接的，因此也没有关闭UDP之类的事情。
+写一个长度为0的数据报是可行的。UDP不像TCP套接字上read返回0值表示对端已关闭连接，recvfrom返回0是可以接受的，因为UDP是无连接的，因此也没有关闭UDP之类的事情。UDP套接字也不需要调用`listen`函数，listen由TCP套接字调用，否则会报`Operation not supported on socket` 错误。
 
 如果recvfrom是一个空指针，那么相应的addrlen也必须是一个空指针。
 
