@@ -11,7 +11,7 @@ int main(int argc, char const *argv[])
         ++argv;
         if ((hptr = gethostbyname(*argv)) == NULL)
         {
-            err_msg("gethostname error for host: %s: %s", *argv, hstrerror(h_errno));
+            err_printf("gethostname error for host: %s: %s", *argv, hstrerror(h_errno));
             continue;
         }
 
@@ -31,7 +31,7 @@ int main(int argc, char const *argv[])
                 break;
         
             default:
-                err_sys("unknown address type");
+                err_quit("unknown address type");
                 break;
         }
     }

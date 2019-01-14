@@ -10,10 +10,15 @@ daytimetcpcli.o: daytimetcpcli.c unp.h
 daytimetcpcli: daytimetcpcli.o
 	$(CC) $^ -o $@ 
 
+daytimetcpsrv.o: daytimetcpsrv.c unp.h
+	$(CC) -c $^
+
+daytimetcpsrv: daytimetcpsrv.o
+	$(CC) $^ -o $@ 
 
 .PHONY: all clean
 
-all: hostent daytimetcpcli
+all: hostent daytimetcpcli daytimetcpsrv
 	
 clean:
-	rm -rf *.o *.gch hostent daytimetcpcli
+	rm -rf *.o *.gch hostent daytimetcpcli daytimetcpsrv

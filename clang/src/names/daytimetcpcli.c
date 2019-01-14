@@ -17,8 +17,6 @@ int main(int argc, char const *argv[])
     len = sizeof(ss);
     getpeername(sockfd, (struct sockaddr *)&ss, &len);
 
-    printf("connected to %s", inet_ntop(ss.ss_family, &ss, addrptr, sizeof(addrptr)));
-
     while((n = read(sockfd, recvline, MAX_BUFF_SIZE-1)) > 0){
         recvline[n] = 0;
         fputs(recvline, stdout);
