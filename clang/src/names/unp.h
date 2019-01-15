@@ -55,6 +55,9 @@ struct addrinfo *host_serv(const char *host, const char *serv, int family, int s
     return res;
 }
 
+/**
+ *  创建一个TCP套接字并连接到服务器
+ */
 int tcp_connect(const char *host, const char *serv)
 {
     int sockfd, n;
@@ -88,6 +91,9 @@ int tcp_connect(const char *host, const char *serv)
     return sockfd;
 }
 
+/**
+ * 创建一个TCP套接字并捆绑服务器的众所周知的端口，而接受外来的请求
+ */
 int tcp_listen(const char *host, const char *serv, socklen_t *addrlenp)
 {
     int listend, n;
@@ -124,4 +130,38 @@ int tcp_listen(const char *host, const char *serv, socklen_t *addrlenp)
         *addrlenp = res->ai_addrlen;
     freeaddrinfo(_res);
     return listend;
+}
+
+/**
+ * 创建未连接的UDP套接字 
+ */
+int udp_client(const char *host, const char *serv, struct sockaddr **saptr, socklen_t *lenp)
+{
+    int n, sockfd;
+    struct addrinfo hints, *res, *_res;
+
+    bzero(&hints, sizeof(struct addrinfo));
+
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    if((n = getaddrinfo(host, serv, &hints, &res)) != 0)
+        err_quit("udp_client error for %s, %s: %s", host, serv, gai_strerror(n));
+
+    _res = res;
+    do {
+        sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if(sockfd >= 0)
+            break;
+    } while ((res = res->ai_next) != NULL);
+    if(res == NULL)
+        err_quit("udp_client error for %s, %s", host, serv);
+    
+    *saptr = malloc(res->ai_addrlen);
+    memcpy(*saptr, res->ai_addr, res->ai_addrlen);
+    *lenp = res->ai_addrlen;
+
+    freeaddrinfo(_res);
+    
+    return sockfd;
 }

@@ -16,9 +16,17 @@ daytimetcpsrv.o: daytimetcpsrv.c unp.h
 daytimetcpsrv: daytimetcpsrv.o
 	$(CC) $^ -o $@ 
 
-.PHONY: all clean
+
+daytimeudpcli.o: daytimeudpcli.c unp.h
+	$(CC) -c $^
+daytimeudpcli: daytimeudpcli.o
+	$(CC) $^ -o $@ 
+
+.PHONY: all clean udp
+
+udp: daytimeudpcli
 
 all: hostent daytimetcpcli daytimetcpsrv
 	
 clean:
-	rm -rf *.o *.gch hostent daytimetcpcli daytimetcpsrv
+	rm -rf *.o *.gch hostent daytimetcpcli daytimetcpsrv daytimeudpcli
