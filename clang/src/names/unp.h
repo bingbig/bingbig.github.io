@@ -165,3 +165,32 @@ int udp_client(const char *host, const char *serv, struct sockaddr **saptr, sock
     
     return sockfd;
 }
+
+/**
+ * 创建已连接套接字
+ */ 
+int udp_connect(const char *host, const char *serv)
+{
+    int sockfd, n;
+    struct addrinfo hints, *res, *_res;
+
+    if((n = getaddrinfo(host, serv, &hints, &res)) != 0)
+        err_quit("udp_connect error for %s, %s: %s", host, serv, gai_strerror(n));
+    
+    _res = res;
+    do {
+        sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if(sockfd == -1)
+            continue;
+        if(connect(sockfd, res->ai_addr, res->ai_addrlen) == 0)
+            break;
+        close(sockfd);
+    } while((res = res->ai_next) != NULL);
+
+    if(res == NULL)
+        err_quit("udp connection error for %s, %s", host, serv);
+
+    freeaddrinfo(_res);
+
+    return sockfd;
+}
