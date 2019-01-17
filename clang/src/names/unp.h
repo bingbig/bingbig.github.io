@@ -167,7 +167,12 @@ int udp_client(const char *host, const char *serv, struct sockaddr **saptr, sock
 }
 
 /**
- * 创建已连接套接字
+ * 创建已连接套接字。
+ * （1）本函数相比udp_client不需要结尾两个参数，调用者可以改用write代替sendto，因此本函数不必返
+ * 回一个套接字地址结构及其长度。
+ * （2）本函数几乎等同于tcp_connect，差别之一在于UDP套接字上的connect调用不会发送任何东西到对端，
+ * 如果存在错误（譬如对端不可达或所指定的端口上没有服务器），调用者就得等到向对端发送一个数据报
+ * 之后才能发现。
  */ 
 int udp_connect(const char *host, const char *serv)
 {
@@ -190,6 +195,44 @@ int udp_connect(const char *host, const char *serv)
     if(res == NULL)
         err_quit("udp connection error for %s, %s", host, serv);
 
+    freeaddrinfo(_res);
+
+    return sockfd;
+}
+
+/**
+ * 为UDP服务器创建未连接套接字
+ */ 
+int udp_server(const char *host, const char *serv, socklen_t *lenptr)
+{
+    int sockfd, n;
+    struct addrinfo hints, *res, *_res;
+    
+    bzero(&hints, sizeof(struct addrinfo));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    if ((n = getaddrinfo(host, serv, &hints, &res)) != 0)
+        err_quit("udp_server error for %s, %s: %s", host, serv, gai_strerror(n));
+    
+    _res = res;
+    do {
+        sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if(sockfd == -1)
+            continue;
+        
+        if(bind(sockfd, res->ai_addr, res->ai_addrlen) == 0)
+            break;
+        
+        close(sockfd);
+    } while((res = res->ai_next) != NULL);
+
+    if(res == NULL)
+        err_quit("udp_server error for %s, %s", host, serv);
+    
+    if(lenptr)
+        *lenptr = res->ai_addrlen;
     freeaddrinfo(_res);
 
     return sockfd;

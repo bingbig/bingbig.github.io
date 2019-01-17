@@ -22,11 +22,16 @@ daytimeudpcli.o: daytimeudpcli.c unp.h
 daytimeudpcli: daytimeudpcli.o
 	$(CC) $^ -o $@ 
 
+daytimeudpsrv.o: daytimeudpsrv.c unp.h
+	$(CC) -c $^
+daytimeudpsrv: daytimeudpsrv.o
+	$(CC) $^ -o $@ 
+
 .PHONY: all clean udp
 
-udp: daytimeudpcli
+udp: daytimeudpcli daytimeudpsrv
 
 all: hostent daytimetcpcli daytimetcpsrv
 	
 clean:
-	rm -rf *.o *.gch hostent daytimetcpcli daytimetcpsrv daytimeudpcli
+	rm -rf *.o *.gch hostent daytimetcpcli daytimetcpsrv daytimeudpcli daytimeudpsrv
