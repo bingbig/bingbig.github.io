@@ -481,3 +481,41 @@ int udp_server(const char *host, const char *serv, socklen_t *lenptr)
 #### 服务端程序
 <<<@/clang/src/names/daytimeudpsrv.c
 
+## getnameinfo函数
+getnameinfo是getaddrinfo函数的互补函数。本函数以协议无关的方式提供主机和服务信息。
+
+```c
+#include <netdb.h>
+
+int getnameinfo(const struct addrinfo *sockaddr, socklen_t addrlen,
+                char *host, socklen_t hostlen,
+                char *serv, socklen_r servlen, int flags); /* 返回：若成功则为0， 出错为非0  */
+```
+
+## 可重入函数
+gethostbyname是`不可重入（re-entrant）`。
+- 由于历史的原因，`gethostbyname`，`gethostbyaddr`、`getservbyname`和`getservbyport`这几个函数是不可重入的，因为它们都返回指向同一个静态结构的指针。
+
+- `inet_pton` 和 `inet_ntop` 总是可重入的， `inet_ntoa` 是不可重入的。
+
+- `getaddrinfo` 可重入的前提是由它调用的函数都可重入。也就是说，它应该调用可重入版本的 `gethostbyname`（以解析主机名）和 `getservbyname`（以解析服务名），本函数返回的结果全部存放在动态分配的内存空间的原因之一就是允许它可重入。
+
+- `getnameinfo` 可重入的前提是由它调用的函数都可以重入。也就是说，它应该调用可重入版本的 `gethosrbyaddr`（以反向解析主机名）和 `getservbyport`（以反向解析服务名）。它的两个结果字符串（分别为主机名和服务名）由调用者分配存储空间，从而允许它们可重入。
+
+## gethostbyname_r和gethostbyaddr_r函数
+有两种方法把不可重入的函数改为可重入的函数：
+1. 把由不可重入函数填写并返回静态结构的做法改为由调用者分配再由可重入函数填写结构。
+2. 由可重入函数调用 `malloc `以动态分配内存空间。
+
+```c
+#include <netdb.h>
+
+struct hostent *gethostbyname_r(const char *hostname,
+                                struct hostent *result,
+                                char *buf, int buflen, int *h_errnop);
+struct hostent *gethostbyaddr_r(const char *addr, int len, int type,
+                                struct hostent *result,
+                                char *buf, int buflen, int *h_errnop);
+```
+
+其中result参数由调用者分配并由被调用者填写的hostent结构。
