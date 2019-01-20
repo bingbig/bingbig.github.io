@@ -26,7 +26,7 @@ int shmget(key_t key, size_t size, int oflag); /* 返回： 若成功则共享�
 
 `key`的值既可以是`ftok`的返回值，也可以是`IPC_PRIVATE`。
 
-`size`以字节为单位指定内存区的大小。新建共享内存区时必须指定部位0的值，访问一个已存在的则应为0。
+`size`以字节为单位指定内存区的大小。新建共享内存区时必须指定不为0的值，访问一个已存在的则应为0。
 
 `oflag`是指读写权限值的组合，它还可以与`IPC_CREATE`或`IPC_CREAT|IPC_EXCL`按位或。（IPC_CREATE：Create entry if key does not exist；IPC_EXCL：Fail if key exists）。
 返回值是一个称为`共享内存区标识符(shared memory identifier)`的整数。
