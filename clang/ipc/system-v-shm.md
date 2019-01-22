@@ -38,14 +38,13 @@ int shmget(key_t key, size_t size, int oflag); /* 返回： 若成功则共享�
 
 void *shmat(int shmid, const void *shmaddr, int flag); /* 返回：成功返回映射区的起始地址，若出错返回 -1 */
 ```
-由shmget创建或者打开的共享内存区后，通过嗲用shmat把它附接到调用进程的地址空间。
-shmid是标识符，shmat返回值是所指定的共享内存区在调用进程内的起始地址。
+由shmget创建或者打开的共享内存区后，通过调用shmat把它附接到调用进程的地址空间。`shmid`是标识符，shmat返回值是所指定的共享内存区在调用进程内的起始地址。
 - 如果shmaddr是空指针，那么系统替调用者选择地址，推荐使用；
 - 如果shmaddr非空，返回地址取决于调用者是否给flag参数指定了`SHM_RND`值：
     - 如果没有指定SHM_RND值，那么相应的内存附接到由shmaddr参数指定的地址
-    - 如果有，那么相应的共享内存区附接到由shmaddr参数指定的地址向下舍入一个SHMLAB常值。LAB代表低端边界地址（Lower boundary address）。
+    - 如果有，那么相应的共享内存区附接到由shmaddr参数指定的地址向下舍入一个`SHMLAB`常值。LAB代表低端边界地址（Lower boundary address）。
 
-默认情况下，只要调用进程具有某个共享内存区的读写权限，它附接到该内存后就能够同时读写该内存区。flag参数也可以指定 `SHM_RDONLY`值，限定只读。
+默认情况下，只要调用进程具有某个共享内存区的读写权限，它附接到该内存后就能够同时读写该内存区。flag参数也可以指定 `SHM_RDONLY`值以限定只读。
 
 ## shmdt 函数
 ```c
@@ -53,7 +52,7 @@ shmid是标识符，shmat返回值是所指定的共享内存区在调用进程�
 
 int shmdt(const void *shmaddr); /* 返回：成功返回0，若出错返回 -1 */
 ```
-当一个进程完成某个共享内存区的使用时，调用shmdt断接这个内存区。但不会删除所指定的共享内存区。
+当一个进程完成某个共享内存区的使用时，调用`shmdt`断接这个内存区。但不会删除所指定的共享内存区。
 
 ## shmctl 函数
 ```c
@@ -62,17 +61,17 @@ int shmdt(const void *shmaddr); /* 返回：成功返回0，若出错返回 -1 *
 int shmctl(int shmid, int cmd, struct shmid_ds *buff); /* 返回：成功返回0，若出错返回 -1 */
 ```
 shmctl函数提供了对一个共享内存区的多种操作：
-- IPC_RMID
+- `IPC_RMID`
 
 从系统中删除由shmid表示的共享内存区
 
-- IPC_SET
+- `IPC_SET`
 
-给所指定的共享内存区设置其shmid_ds结构的以下三个成员：shm_perm.uid, shm_perm.gid, shm_perm.mode，它们的值来自buff参数所指向的结构体中的相应成员。shm_ctime的值也用当前时间替换。
+给所指定的共享内存区设置其shmid_ds结构的以下三个成员：`shm_perm.uid`, `shm_perm.gid`, `shm_perm.mode`，它们的值来自`buff`参数所指向的结构体中的相应成员。`shm_ctime`的值也用当前时间替换。
 
 - IPC_STAT
 
-通过buff参数向调用者返回所指定共享内存区当前的shmid_ds结构。
+通过buff参数向调用者返回所指定共享内存区当前的`shmid_ds`结构。
 
 ## 示例
 ### 头文件unpipc.h

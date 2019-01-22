@@ -91,7 +91,7 @@ int daemon_init(const char *, int);
 #### TCP时间服务器守护进程
 <<<@/clang/src/inetd/daytimetcpsrv.c{12}
 
-#### 编译
+#### 编译 Makefile
 ```makefile
 unp.o: unp.c
 	$(CC) -c $^

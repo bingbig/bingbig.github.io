@@ -25,5 +25,5 @@ next: /PHP/content
 ::: tip 来源
 以下代码示例主要是来自《UNIX网络编程 卷2: 进程间通讯 (第2版)》
 :::
-- [System V共享内存区]('ipc/system-v-shm.md')
+- [System V共享内存区](ipc/system-v-shm.md)
 
