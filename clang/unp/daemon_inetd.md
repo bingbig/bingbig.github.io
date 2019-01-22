@@ -1,16 +1,16 @@
 # 守护进程和inetd超级服务器
-守护进程（daemon）是在后台运行且不与任何终端关联的进程。守护进程通常没有控制终端，为了避免与作业控制，终端会话管理等发生不期望的任何交互，也为了避免非预期的输出到终端。
+守护进程（daemon）是在后台运行且不与任何终端关联的进程。守护进程通常没有控制终端，为了避免与作业控制、终端会话管理等发生不期望的任何交互，也为了避免非预期的输出到终端。
 
 因为守护进程没有控制终端，因此需要专门的方法来输出守护进程产生的消息。`syslog`函数是输出这些消息的标准方法，它把这些消息发送给`syslogd`守护进程。
 
 ## syslogd守护进程
 Unix系统中的syslog通常随着系统的初始化脚本而启动，而且在系统运行期间一直运行。源自Berkeley的syslogd实现在启动时通常会执行以下操作：
-1. 读取配置文件（/etc/syslog.conf），指定本进程如何处理各种日志消息，如写到控制台或者转发到另一台主机上的syslogd进程。
-2. 创建Unix域套接字，给它捆绑路径名/var/run/log(在某些系统上是/dev/log).
+1. 读取配置文件（/etc/syslog.conf），指定本进程如何处理各种日志消息，如写到控制台或者转发到另一台主机上的syslogd进程；
+2. 创建Unix域套接字，给它捆绑路径名/var/run/log(在某些系统上是/dev/log)；
 3. 创建UDP套接字，绑定514端口；
-4. 打开路径名/dev/klog。来自内核的任何出错消息看着像是这个设备的输入。
+4. 打开路径名/dev/klog。来自内核的任何出错消息都会作为这个设备的输入。
 
-此后syslogs守护进程在一个无限循环中运行：调用select等待2，3，4步描述符之一变得可读，读入日志消息，并按照配置文件进行处理。如果守护进程收到`SIGHUP`信号，那就重新读取配置文件。
+此后syslogd守护进程在一个无限循环中运行：调用select等待2，3，4步描述符之一变得可读，读入日志消息，并按照配置文件进行处理。如果守护进程收到`SIGHUP`信号，那就重新读取配置文件。
 
 ## syslog 函数
 ```c
@@ -51,10 +51,64 @@ openlog可以在首次调用syslog前调用，closelog可以在应用进程不�
 
 ### 守护进程例子
 
-#### daemon_int
-<<<@/clang/src/inetd/daemon_init.c
+#### unp.h
+```c{9,10,14,16,27}
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <syslog.h>
+#include <fcntl.h>
 
+#define MAX_BUFF_SIZE   1024
+#define LISTENQ 5
+#define MAX_FD_SIZE 64
 
+int is_daemon_proc;
 
+void err_msg(const char *, va_list);
+void err_printf(const char *, ...);
+void err_quit(const char *, ...);
+struct addrinfo *host_serv(const char *, const char *, int, int);
+int tcp_connect(const char *, const char *);
+int tcp_listen(const char *, const char *, socklen_t *);
+int udp_client(const char *, const char *, struct sockaddr **, socklen_t *);
+int udp_connect(const char *, const char *);
+int udp_server(const char *, const char *, socklen_t *);
+int daemon_init(const char *, int);
+```
 
+#### daemon.c
+<<<@/clang/src/inetd/daemon.c{1-80}
 
+#### unp.c
+<<<@/clang/src/inetd/unp.c{8-11}
+
+#### TCP时间服务器守护进程
+<<<@/clang/src/inetd/daytimetcpsrv.c{12}
+
+#### 编译
+```makefile
+unp.o: unp.c
+	$(CC) -c $^
+
+daemon.o: daemon.c
+	$(CC) -c $^
+
+daytimetcpsrv.o: daytimetcpsrv.c
+	$(CC) -c $^
+
+server: daytimetcpsrv.o unp.o daemon.o
+	$(CC) -o $@ $^
+
+.PHONY: all clean
+
+all: server
+
+clean:
+	rm -rf *.o *.gch server
+```
