@@ -9,7 +9,7 @@ next: /network/content
 - [PHP基础知识](/PHP/basic.md)
 - [PHP编程技巧与优化](/PHP/tips.md)
 - [安全建议](/PHP/sugs.md)
-- [Composer](/PHP/Composer.md)
+- [Composer](/PHP/composer.md)
 - [Static](/PHP/static.md)
 - [路由技术和原理](/PHP/router.md)
 

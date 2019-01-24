@@ -12,7 +12,7 @@
 
 原始定义：High level modules should not depend upon low level modules. Both should depend upon abstractions. Abstractions should not depend upon details. Details should depend upon abstractions。
 
-官方翻译：==高层模块不应该依赖低层模块，两者都应该依赖其抽象；抽象不应该依赖细节，细节应该依赖抽象。==
+官方翻译：高层模块不应该依赖低层模块，两者都应该依赖其抽象；抽象不应该依赖细节，细节应该依赖抽象。
 
 ### 2、自己理解
 
@@ -129,15 +129,15 @@ abstract class Text
 
 在介绍依赖倒置具体如何使用之前，我们需要引入IOC容器相关的概念，我们先来看看它们之间的关系。
 
-**依赖倒置原则（DIP）：**一种软件架构设计的原则（抽象概念）。
+**依赖倒置原则（DIP）：** 一种软件架构设计的原则（抽象概念）。
 
-**控制反转（IoC, Inversion of Control）：**一种反转流、依赖和接口的方式（DIP的具体实现方式）。这是一个有点不太好理解和解释的概念，通俗地说，就是应用程序本身不负责依赖对象的创建和维护，而是将它交给一个外部容器（比如Unity）来负责，这样控制权就由应用程序转移到了外部IoC 容器，即控制权实现了所谓的反转。例如在类型A中需要使用类型B的实例，而B 实例的创建并不由A 来负责，而是通过外部容器来创建。
+**控制反转（IoC, Inversion of Control）：** 一种反转流、依赖和接口的方式（DIP的具体实现方式）。这是一个有点不太好理解和解释的概念，通俗地说，就是应用程序本身不负责依赖对象的创建和维护，而是将它交给一个外部容器（比如Unity）来负责，这样控制权就由应用程序转移到了外部IoC 容器，即控制权实现了所谓的反转。例如在类型A中需要使用类型B的实例，而B 实例的创建并不由A 来负责，而是通过外部容器来创建。
 
-**依赖注入（DI, Dependency Injection）：**IoC的一种实现方式，用来反转依赖（IoC的具体实现方式）。也有很多博文里面说IOC也叫DI，其实根据博主的理解，DI应该是IOC的具体实现方式，比如我们如何实现控制反转，答案就是通过依赖注入去实现。
+**依赖注入（DI, Dependency Injection）：** IoC的一种实现方式，用来反转依赖（IoC的具体实现方式）。也有很多博文里面说IOC也叫DI，其实根据博主的理解，DI应该是IOC的具体实现方式，比如我们如何实现控制反转，答案就是通过依赖注入去实现。
 
-**IoC容器：**依赖注入的**框架**，用来==映射依赖，管理对象创建和生存周期（DI框架），自动创建、维护依赖对象==。
+**IoC容器：** 依赖注入的**框架** ，用来映射依赖，管理对象创建和生存周期（DI框架），自动创建、维护依赖对象。
 
-关于Ioc容器，各个语言都有自己的成熟的解决方案，比如Java里面最伟大的框架之一Spring，.net里面轻量级的Autofac等。由于博主对C#语言相对来说比较熟悉，这里就结合C#里面的一款ioc容器来举例说明。.net里面常用的ioc容器：
+关于`Ioc`容器，各个语言都有自己的成熟的解决方案，比如Java里面最伟大的框架之一`Spring`，`.net`里面轻量级的`Autofac`等。由于博主对`C#`语言相对来说比较熟悉，这里就结合C#里面的一款ioc容器来举例说明。.net里面常用的ioc容器：
 
 - **http://Spring.NET**： [http://www.springframework.net/**](http://link.zhihu.com/?target=http%3A//www.springframework.net/)
 - **Unity**： [http://unity.codeplex.com/**](http://link.zhihu.com/?target=http%3A//unity.codeplex.com/)
