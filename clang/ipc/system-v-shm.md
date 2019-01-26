@@ -169,7 +169,7 @@ void Shmctl(int id, int cmd, struct shmid_ds *buff)
 <<<@/clang/ipc/src/svshm/shmget.c
 
 ### shrmid.c
-<<<@/clang/ipc/src/svshm/shrmid.c
+<<<@/clang/ipc/src/svshm/shmrmid.c
 
 ### shmwrite.c
 <<<@/clang/ipc/src/svshm/shmwrite.c

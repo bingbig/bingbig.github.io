@@ -32,6 +32,10 @@ module.exports = {
                         link: '/network/content'
                     },
                     {
+                        text: '算法',
+                        link: '/algorithms/content'
+                    },
+                    {
                         text: 'Linux',
                         link: '/Linux/content'
                     },
@@ -92,6 +96,7 @@ module.exports = {
                 'unp/udp-socket',
                 'unp/names',
                 'unp/daemon_inetd',
+                'ipc/shared-memory',
                 'ipc/system-v-shm'
             ],
             '/PHP/': [
