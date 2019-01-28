@@ -13,24 +13,24 @@
 
 ## C 版本
 通过C来实现共享缓存（共享内存区数据缓存）的话需要在共享内存区中保存哈希表，因为共享内存区是进程中的映射，在不同的进程中其地址可能不同。也就是说，不能通过malloc等调用来实现内存管理了，哈希表中的所用数据的地址都必须通过相对于内存共享区起始地址的偏移量计算得到。我设想了很多的数据保存和查找方案，都能实现Key-Value的查找插入和删除和动态扩容的机制。偶然间，我发现一篇很好的博客，解决了和我一样的问题，不过人家的方案更加健全和完善，在此贴上来，有时间翻译一下。
+
+## Shared Memory Hash Table
 > 原网址：[https://vhanda.in/blog/2012/07/shared-memory-hash-table/](https://vhanda.in/blog/2012/07/shared-memory-hash-table/)
 
-### Shared Memory Hash Table
-19 Jul 2012
+在过去的一个月里我都在研究如何在共享内存中保存的哈希表，这样就可以很简单的跨进程使用了。在多个进程中缓存简单的数据这是一个很好的想法。我的使用目的主要是`Nepomuk Resource class`，它通过使用哈希表来优化键值对的缓存。为了保证每个应用的`Resource classes`之间的一致性，在其中花费了很多的努力。
 
-For the last month I’ve been working on a hash table which is stored in shared memory and can thus easily be used across applications. This is ideal for simple caches of data that reside in multiple applications. My specific use case was the Nepomuk Resource class, which is a glorified cache of key value pairs and uses a hash table. A considerable amount of effort has gone into making sure that each application’s Resource classes are consistent with the other applications.
+我总以为这个基本的想法肯定已经有人实现过了，但是我就是找不到真正能支持动态调整大小的共享内存哈希表。
 
-I always thought something this basic would have been implemented, but I just couldn’t find a shared memory hash table which actually supported resizing.
-
-#### Basic Hash Table
-Hashing is arguably one of the most important concepts of computer science. If you aren’t aware of how it works here are some nice links -
+#### 基本的哈希表
+哈希可以说是计算机科学中最重要的概念之一了，如果你还不知道它的工作原理，这里有一些很好的链接可以参考：
 
 1. [Wikipedia Article](http://en.wikipedia.org/wiki/Hash_table)
 2. [Video lectures from algo-class.org](https://class.coursera.org/algo/lecture/preview)
 3. [Video lectures from MIT](Video lectures from MIT)
 
-#### Shared Memory Hash Table
+#### 共享内存哈希表
 When implementing a hash table in shared memory, one encounters a couple of problems which normal hash tables do not have to deal with. Namely ‘named memory locations’. In the Unix world each shared memory location has to be given a unique identifier so that it can be accessed by other applications. Because of that we cannot allocate each Node/Bucket independently.
+在共享内存区中实现哈希表，会碰到一些列普通哈希表不要处理的问题。
 
 Most hash tables, which handle collisions by chaining look like this
 
