@@ -21,53 +21,52 @@
 
 我总以为这个基本的想法肯定已经有人实现过了，但是我就是找不到真正能支持动态调整大小的共享内存哈希表。
 
-#### 基本的哈希表
+### 基本的哈希表
 哈希可以说是计算机科学中最重要的概念之一了，如果你还不知道它的工作原理，这里有一些很好的链接可以参考：
 
 1. [Wikipedia Article](http://en.wikipedia.org/wiki/Hash_table)
 2. [Video lectures from algo-class.org](https://class.coursera.org/algo/lecture/preview)
 3. [Video lectures from MIT](Video lectures from MIT)
 
-#### 共享内存哈希表
-When implementing a hash table in shared memory, one encounters a couple of problems which normal hash tables do not have to deal with. Namely ‘named memory locations’. In the Unix world each shared memory location has to be given a unique identifier so that it can be accessed by other applications. Because of that we cannot allocate each Node/Bucket independently.
-在共享内存区中实现哈希表，会碰到一些列普通哈希表不要处理的问题。
+### 共享内存哈希表
+在共享内存区中实现哈希表，会碰到一些列普通哈希表不要处理的问题。在unix环境中，每个共享内存区都有一个唯一的标示，其他的进程通过标示可以访问它。正因为此，我们不能独立的为每个Node/Bucket分配内存。
 
-Most hash tables, which handle collisions by chaining look like this
+大多数的哈希表，都是通过链的方式来解决冲突。
 
 ![Normal Hash Table](./assets/images/normal-hash-table.png)
 
-Allocating a new named shared memory region for each node seems like quite an overkill.
+为每个node分配一个新的共享内存区就显得有点夸张了。
 
-##### Structure
-Since everything has to fit inside a contiguous memory location, we need to structure the hash table a little differently.
+#### 结构
+所有的数据都得保存在一个连续的内存空间中，因为我们需要的哈希表的结构和一般的就不一样了。
 
 ![Shared Memory Hash Table](./assets/images/shared-memory-hash-table.png)
 
-We use two shared memory locations - `HashName` and `HashData`. This is done cause a hash table is not fixed in size, and will need to be reallocated. With the reallocations, a new named shared memory will have to be created, and all existing clients would need to be informed to use this newly allocated location which would have a different name.
+我们使用两个共享内存区-`HashName` 和 `HashData`。这么做的目的是因为哈希表的大小不是固定的，它可能需要重新分配大小。在重新分配大小的时候，一个新的共享内存区会被创建，我们需要通知所有的客户程序使用这个新的内存区标示。
 
-Instead we use HashName as the unique identifier the client knows about, and HashData is internally used and can be changed when the hash table needs to grow in size.
+`HashName`只是用来告诉客户唯一标示，而`HashData`才是我们最终要用的，它随着哈希表大小的变化需要能够改变。
 
-##### Hash Name data
+#### Hash Name 数据
 
 ![Hash Name](./assets/images/hash-name.png)
 
-The additional integer is a micro optimization. Whenever a client needs to use the hash table they need to make sure that they are connected to the appropriate shared memory, and not the old version. The code does that by checking if HashData name is the same as the same as the one provided by HashName.
+附加的整数是一个小的优化。当客户端需要使用哈希表时，它需要确定它们链接的是恰当的内存区，而不是老的版本。它需要确认自己记录的HashData name和`HashName`共享内存区记录的是不是一样的。
 
-This results in a string comparison, which would take a certain number of cycles depending on the length of the string. We use an additional integer to indicate the if the string has changed. Integer comparisons are a lot faster than string comparisons.
+这需要字符串比较，我能通过附加的整数来暗示这个字符发生了变化。整数的比较比字符串的比较要快很多了。
 
-##### Internal Data
+#### 实际数据
 
 ![Hash Internal Data](./assets/images/hash-data.png)
 
-Most of the initial members are quite obvious, but I’m still listing them.
+大多数的初始化成员的含义都显而易见，但是我们还是说明一下吧：
 - Size: The number of elements in the hash table
 - Capacity: The total number of elements the hash table can hold
 - Invalid: The number of buckets that invalid (have been deleted)
 - Empty-Bucket: The offset of the next empty bucket which may be used for insertion
 
-After this comes the array of offsets referred internally as m_buckets. This array instead of holding the pointers to the Buckets, like in a traditional hash table, it holds offsets from the beginning of the next array.
+紧接着这些之后是`offsets`数组，指向内部的`m_buckets`。这个数组不像传统的哈希表中的一样存储指向Buckets的指针，保存的是相对于下一个数组开始位置的偏移量。
 
-The next array is an array of Bucket s, which is internally referred to as m_data. This array holds the key value pairs. A typical Bucket is defined as -
+下一个数组是一个保存`Bucket`的数组，内部指向`m_data`。这个数组维护着键值对。`Bucket`类型定义如下：
 ```c
 struct Bucket {
     KeyType key;
@@ -77,11 +76,13 @@ struct Bucket {
 }
 ```
 The link member is again not a pointer, but it contains the integer offset to the next Bucket from the start of m_data.
+`link`成员同样不是一个指针，包含的是从`m_data`开始到下一个`Bucket`的整数偏移量。
 
-##### Insertions
-Insert operations are quite simple. The `key` is hashed into an integer, which after a modulo operation is used as the index.
+#### 插入
+插入操作很简单。`key`被哈希成一个整型，然后取模后用作索引。
 
 The corresponding `index` is checked in `m_buckets`. If `m_buckets` does not already have some value over there, there is no collision and we just allocate a new Bucket and plug in its offset.
+在`m_buckets`查找相应的`index`，如果`m_buckets`在相应的地方没有值，那么就没有冲突发生，
 
 Allocations of new buckets are done by consuming the location given by emptyBucket, and then incrementing its value.
 

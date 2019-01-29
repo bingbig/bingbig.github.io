@@ -24,4 +24,4 @@ next: /network/content
 ## Laravel
 - [容器](/PHP/Laravel/Container.md)
 
-<test />
+<discussion page-id="php-content" />
