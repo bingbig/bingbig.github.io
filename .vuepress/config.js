@@ -32,6 +32,10 @@ module.exports = {
                         link: '/network/content'
                     },
                     {
+                        text: '数据结构',
+                        link: '/datastructure/content'
+                    },
+                    {
                         text: '算法',
                         link: '/algorithms/content'
                     },
