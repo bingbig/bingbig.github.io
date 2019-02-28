@@ -25,26 +25,40 @@ void printBinaryTree(BTree *bt);
 
 BTree *createBinaryTreeFromString(char *btree_string)
 {
-    char *p = btree_string;
-    BTree STACK[1024], *root;
-    char d;
-    while(*p)
+    char *c = btree_string;
+    BTree *STACK[1024], *root, *node, *p;
+    int flag = 0, top = -1;
+
+    while(*c)
     {
-        d = *p;
-        switch(d){
+        switch(*c){
             case '(':
+                flag = 1;   // left tree
+                STACK[++top] = p;
                 break;
             case ')':
+                --top;
                 break;
             case ',':
+                flag = 2;   // right tree
                 break;
             case '@':
+                return root;
                 break;
             default:
-                
+                p = (BTree *)malloc(sizeof(BTree));
+                p->data = *c;
+                p->ltree = NULL;
+                p->rtree = NULL;
+                if(flag == 0)
+                    root = p;
+                else if(flag == 1)
+                    STACK[top]->ltree = p;
+                else if(flag == 2)
+                    STACK[top]->rtree = p;
         }
 
-        p++;
+        c++;
     }
 
     return root;
@@ -52,7 +66,7 @@ BTree *createBinaryTreeFromString(char *btree_string)
 
 void printBinaryTree(BTree *bt)
 {
-
+    
 }
 
 
