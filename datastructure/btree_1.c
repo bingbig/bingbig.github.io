@@ -21,7 +21,7 @@ typedef struct BTree
 } BTree;
 
 BTree *createBinaryTreeFromString(char *btree_string);
-void printBinaryTree(BTree *bt);
+void preOrderPrint(BTree *bt);
 
 BTree *createBinaryTreeFromString(char *btree_string)
 {
@@ -57,26 +57,30 @@ BTree *createBinaryTreeFromString(char *btree_string)
                 else if(flag == 2)
                     STACK[top]->rtree = p;
         }
-
+        
         c++;
     }
 
     return root;
 }
 
-void printBinaryTree(BTree *bt)
+void preOrderPrint(BTree *bt)
 {
-    
+    if(bt == NULL){
+        return;
+    }
+
+    printf("%c\t", bt->data);
+    preOrderPrint(bt->ltree);
+    preOrderPrint(bt->rtree);
 }
-
-
 
 int main()
 {
 
-    char *p = "A(B(D,E),C(F(,H)))@";
+    char *p = "A(B(D,E(G)),C(F(,H)))@";
     BTree *bt = createBinaryTreeFromString(p);
-    printBinaryTree(bt);
+    preOrderPrint(bt);
 
     return 1;
 }
