@@ -55,7 +55,78 @@ setupSignalHandlers();
 该函数主要检查下系统的可允许打开文件句柄数，对于redis来说至少要32(`CONFIG_MIN_RESERVED_FDS`)个文件句柄，如果检测到环境不合适，会去修改环境变量，以适合redis的运行。
 
 #### `aeCreateEventLoop`
+```c
+server.el = aeCreateEventLoop(server.maxclients+CONFIG_FDSET_INCR);
+```
+宏`CONFIG_FDSET_INCR`展开是`CONFIG_MIN_RESERVED_FDS+96`，初始化event loop时，redis作者antirez设置总共的描述符 = server.maxclients + `RESERVED_FDS` + 富余的数目（保证安全），RESERVED_FDS 默认为32。
+这个函数很重要，redis的事件对象就是在这个函数里面创建的，包括一些高并发异步机制对象也是在这里面初始化的。
 
+```c
+aeEventLoop *aeCreateEventLoop(int setsize) {
+    aeEventLoop *eventLoop;
+    int i;
+
+    if ((eventLoop = zmalloc(sizeof(*eventLoop))) == NULL) goto err;
+    eventLoop->events = zmalloc(sizeof(aeFileEvent)*setsize);
+    eventLoop->fired = zmalloc(sizeof(aeFiredEvent)*setsize);
+    if (eventLoop->events == NULL || eventLoop->fired == NULL) goto err;
+    eventLoop->setsize = setsize;
+    eventLoop->lastTime = time(NULL);
+    eventLoop->timeEventHead = NULL;
+    eventLoop->timeEventNextId = 0;
+    eventLoop->stop = 0;
+    eventLoop->maxfd = -1;
+    eventLoop->beforesleep = NULL;
+    eventLoop->aftersleep = NULL;
+    if (aeApiCreate(eventLoop) == -1) goto err;
+    /* Events with mask == AE_NONE are not set. So let's initialize the
+     * vector with it. */
+    for (i = 0; i < setsize; i++)
+        eventLoop->events[i].mask = AE_NONE;
+    return eventLoop;
+
+err:
+    if (eventLoop) {
+        zfree(eventLoop->events);
+        zfree(eventLoop->fired);
+        zfree(eventLoop);
+    }
+    return NULL;
+}
+```
+`aeApiCreate`是作者封装的I/O多路复用函数中的一个。对于异步机制的选择，按性能的高到低的顺序排列可以看到redis是这样一个顺序`evport`->`epoll`->`kqueue`->`select`。
+
+```c
+/* 选择系统最佳的I/O多路复用函数库。按性能的高到低的顺序排列 */
+#ifdef HAVE_EVPORT
+#include "ae_evport.c" /* Solaris系统内核提供支持的 */
+#else
+    #ifdef HAVE_EPOLL
+    #include "ae_epoll.c" /* LINUX系统内核提供支持的 */
+    #else
+        #ifdef HAVE_KQUEUE
+        #include "ae_kqueue.c" /* Mac 系统提供支持的 */
+        #else
+        #include "ae_select.c" /* 是POSIX提供的， 一般的操作系统都有支撑 */
+        #endif
+    #endif
+#endif
+```
+#### `listenToPort`
+```c
+listenToPort(server.port,server.ipfd,&server.ipfd_count)
+```
+全局结构体对象server的成员bindaddr中保存了要绑定和监听的IP（可以是多个），`listenToPort`依次绑定这些IP和`server.port`端口。
+
+#### `anetUnixServer`
+这个函数则是启动uinx socket的监听。
+
+#### `evictionPoolAlloc`
+初始化LRU键池。
+
+#### `aeCreateTimeEvent`
+
+#### `aeCreateFileEvent`
 
 
 ## 参考资料
