@@ -88,6 +88,7 @@ module.exports = {
         ],
         sidebar: {
             '/topics/': [
+                'redis/redisinit',
                 'redis/anet',
             ],
             '/clang/': [
