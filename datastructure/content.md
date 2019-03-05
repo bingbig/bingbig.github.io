@@ -163,9 +163,75 @@ WPL = w<sub>1</sub>l<sub>1</sub> + w<sub>2</sub>l<sub>2</sub> + ... + w<sub>m</s
 ![构造哈法曼树的过程](./images/huffman_eg.png)
 
 #### 哈夫曼编码
+哈法曼编码是一种无损的数据压缩算法。算法的基本思想是给输入的字符分配变长的编码，编码的长度取决于相应字符出现的频率。频率越高的字符分配越短的编码，频率越低的字符则分配越长的编码。
 
+分配给输入字符的变长编码称为`字首码(Prefix Codes)`，一个字符对应的编码（位序列，bit sequences）不是其他任何一个字符的编码的前缀。这能确保哈夫曼编码解码生成的字节流时不会产生歧义。举个例子，假设四个字母对应的a，b，c，d和相应的变长编码00， 01， 0和1。这种编码会导致歧义，因为c对应的编码是a和b对应编码的前缀。假设有编码的字节流是0001，那么解码后的输出可能是”cccd“或者”ccb“或者”acd“或者”ab“。
+
+C 示例：
+实现步骤：
+1. 为每个不同的字符创建一个树结点，然后建立一个最小堆（最小堆用来排序，最小堆中的不同结点通过频率的大小来比较。最开始，根节点的频率最低）；
+2. 从最小堆中取出频率最低的两个结点；
+3. 对这两个结点求和并创建一个新的内部结点。第一个取出的结点左右它的左孩子，另外一个作为右孩子。将这个新的内部结点加入到最小堆中；
+4. 重复2，3知道这个堆只包含一个结点。剩下的最后一个结点是根节点。
+
+举例说明：
+```
+1. 建立最小堆后
+character   Frequency
+    a           5
+    b           9
+    c           12
+    d           13
+    e           16
+    f           45
+
+2. 从最小堆中取出最小的两个结点。增加一个新的内部结点，频率为 5 + 9 = 14
+character           Frequency
+       c               12
+       d               13
+Internal Node         14
+       e               16
+       f               45
+
+3. 重复2
+character           Frequency
+Internal Node          14
+       e               16
+Internal Node          25
+       f               45
+
+4. 重复2
+character          Frequency
+Internal Node         25
+Internal Node         30
+      f               45 
+
+5. 重复2
+character     Frequency
+       f         45
+Internal Node    55
+
+6. 重复2
+character      Frequency
+Internal Node    100
+
+7. 最终得到的树如下图，打印编码
+character   code-word
+    f          0
+    c          100
+    d          101
+    a          1100
+    b          1101
+    e          111
+```
+
+![哈夫曼编码最后步骤](./images/huffman_eg_1.jpg)
+
+
+<<<@/datastructure/huffman_encoding.c
 
 
 ## 参考
 - [《数据结构教程(第3版) 唐发根编著》](https://item.jd.com/12106775.html)
 - [哈夫曼算法的理解及原理分析,算法实现,构造哈夫曼树的算法 - 全文](http://www.elecfans.com/rengongzhineng/600143_a.html)
+- [Huffman Coding](https://www.geeksforgeeks.org/huffman-coding-greedy-algo-3/)
