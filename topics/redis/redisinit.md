@@ -12,7 +12,7 @@
 处理了参数和环境变量后，redis陆续执行了一些系列的修改和定义：`setlocale`（设置地域），`zmalloc_set_oom_handler`(设置内存不足时的操作),`srand`(初始化随机种子), `gettimeofday`, `getRandomHexChars`,`dictSetHashFunctionSeed`等等。之后redis检查执行的可执行文件名是否是`redis-sentinel`或者参数中包含`--sentinel`，如果是的话redis将进入`哨兵模式`，进而转入哨兵模式的执行流程中。本文我们只讨论redis普通节点的启动过程。
 
 ## `initServerConfig( )`
-这一步主要是在初始化全局的[`server`](./server.md)对象中的各个数据成员。为下一步解析参数和配置文件做好准备。
+这一步主要是在初始化全局的`server`([上一篇](./server.md))对象中的各个数据成员。为下一步解析参数和配置文件做好准备。
 
 ## `argc` & `argv`
 
@@ -52,7 +52,7 @@ setupSignalHandlers();
 - `signal(SIGPIPE, SIG_IGN)` TCP是全双工的信道，可以看作两条单工信道， TCP连接两端的两个端点各负责一条。 当对端调用close时， 虽然本意是关闭整个两条信道， 但本端只是收到FIN包。按照TCP协议的语义，表示对端只是关闭了其所负责的那一条单工信道，仍然可以继续接收数据。也就是说，因为TCP协议的限制，一个端点无法获知对端的`socket`是调用了`close`还是`shutdown`。对一个已经收到FIN包的socket调用read方法，如果接收缓冲已空，则返回0，这就是常说的表示连接关闭。但第一次对其调用write方法时，如果发送缓冲没问题，会返回正确写入(发送)。但发送的报文会导致对端发送RST报文，因为对端的socket已经调用了close，完全关闭，既不发送，也不接收数据。所以第二次调用write方法(假设在收到RST之后)，会生成SIGPIPE信号，导致进程退出。**为了避免进程退出, 可以捕获SIGPIPE信号, 或者忽略它, 给它设置SIG_IGN信号处理函数**。
 
 #### `createSharedObjects`
-然后redis继续初始化全局的[`server`](./server)对象，并在里面初始化了全局的`shared`对象（`createSharedObjects(void)`）。`createSharedObjects` 这个函数主要是创建一些共享的全局对象。我们平时在跟redis服务交互的时候，如果有遇到错误，会收到一些固定的错误信息或者字符串比如：`-ERR syntax error，-ERR no such key`，这些字符串对象都是在这个函数里面进行初始化的，此外，redis还初始化了`OBJ_SHARED_INTEGERS`（默认为10,000）个整数对象用于共享。
+然后redis继续初始化全局的`server`([上一篇](./server.md))对象，并在里面初始化了全局的`shared`对象（`createSharedObjects(void)`）。`createSharedObjects` 这个函数主要是创建一些共享的全局对象。我们平时在跟redis服务交互的时候，如果有遇到错误，会收到一些固定的错误信息或者字符串比如：`-ERR syntax error，-ERR no such key`，这些字符串对象都是在这个函数里面进行初始化的，此外，redis还初始化了`OBJ_SHARED_INTEGERS`（默认为10,000）个整数对象用于共享。
 
 #### `adjustOpenFilesLimit`
 该函数主要检查下系统的可允许打开文件句柄数，对于redis来说至少要32(`CONFIG_MIN_RESERVED_FDS`)个文件句柄，如果检测到环境不合适，会去修改环境变量，以适合redis的运行。
@@ -206,7 +206,7 @@ void aeMain(aeEventLoop *eventLoop) {
     }
 }
 ```
-`aeMain()`循环调用`aeProcessEvents()`来不停的处理事件（时间事件和文件事件）。那么，redis是如何高效快速处理这两种事件的呢？
+`aeMain()`循环调用`aeProcessEvents()`来不停的处理事件（时间事件和文件事件）。那么，redis是如何高效快速处理这两种事件的呢？这就要好好读一读`aeProcessEvents`（[下一篇](./aeProcessEvents.md)）的实现了。
 
 ## 参考资料
 - [redis启动流程（一）](http://www.ituring.com.cn/article/265187)

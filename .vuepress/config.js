@@ -90,6 +90,7 @@ module.exports = {
             '/topics/': [
                 'redis/server',
                 'redis/redisinit',
+                'redis/aeProcessEvents',
                 'redis/anet',
             ],
             '/clang/': [
