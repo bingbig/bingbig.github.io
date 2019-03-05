@@ -88,6 +88,7 @@ module.exports = {
         ],
         sidebar: {
             '/topics/': [
+                'redis/server',
                 'redis/redisinit',
                 'redis/anet',
             ],
