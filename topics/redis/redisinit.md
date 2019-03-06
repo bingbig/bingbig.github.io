@@ -206,7 +206,7 @@ void aeMain(aeEventLoop *eventLoop) {
     }
 }
 ```
-`aeMain()`循环调用`aeProcessEvents()`来不停的处理事件（时间事件和文件事件）。那么，redis是如何高效快速处理这两种事件的呢？这就要好好读一读`aeProcessEvents`（[下一篇](./aeProcessEvents.md)）的实现了。
+`aeMain()`循环调用`aeProcessEvents()`来不停的处理事件（时间事件和文件事件）。那么，redis是如何高效快速处理这两种事件的呢？这就要好好读一读`Redis事件驱动`（[下一篇](./event_driven_library.md)）的实现了。
 
 ## 参考资料
 - [redis启动流程（一）](http://www.ituring.com.cn/article/265187)

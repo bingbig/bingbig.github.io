@@ -52,10 +52,6 @@ module.exports = {
                         link: '/OS/content'
                     },
                     {
-                        text: 'JavaScipt',
-                        link: '/JavaScript/content'
-                    },
-                    {
                         text: '数据库',
                         link: '/Database/content'
                     },
@@ -90,7 +86,7 @@ module.exports = {
             '/topics/': [
                 'redis/server',
                 'redis/redisinit',
-                'redis/aeProcessEvents',
+                'redis/event_driven_library',
                 'redis/anet',
             ],
             '/clang/': [
@@ -169,14 +165,6 @@ module.exports = {
                 'process_thread',
                 'deadlock_hungry',
                 'sync',
-            ],
-            '/JavaScript/': [
-                'content',
-                'es6_import_jquery',
-                'js_deepcopy',
-                'js_tips',
-                'XMLHttpRequest',
-                'React.js/React_webpack_babel_config'
             ],
             '/Database/': [
                 'content',

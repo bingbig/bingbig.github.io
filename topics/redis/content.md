@@ -5,7 +5,7 @@
 ## 设计
 - [全局变量server](./server.md)
 - [Redis启动流程](./redisinit.md)
-- [Redis事件处理](./aeProcessEvents.md)
+- [Redis事件驱动](./event_driven_library.md)
 
 ## 网络
 - [anet网络封装](./anet.md)
