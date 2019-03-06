@@ -145,8 +145,28 @@ MinHeap *createAndBuildMinHeap(char data[], int freq[], int size)
 MinHeapNode *buildHuffmanTree(char data[], int freq[], int size)
 {
     MinHeapNode *left, *right, *top;
+    MinHeap *mp = createAndBuildMinHeap(data, freq, size);
+    while(!isSizeOne(mp)){
+        left = extractMin(mp);
+        right = extractMin(mp);
+        top = newNode('$', left->freq + right->freq);
+        top->left = left;
+        top->right = right;
+
+        insertMinHeap(mp, top);
+    }
+
+    // 最后剩余的一个结点是根节点，树结构已经完整
+    return  extractMin(mp);
 }
 
+void HuffmanCodes(char data[], int freq[], int size)
+{
+    MinHeapNode *root = buildHuffmanTree(data, freq, size);
+    int arr[MAX_TREE_HT], top = 0;
+    printCodes(root, arr, top);
+}
+    
 int main()
 {
     char arr[] = {'a', 'b', 'c', 'd', 'e', 'f'};
