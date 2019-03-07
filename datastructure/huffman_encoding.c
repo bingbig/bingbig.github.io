@@ -56,12 +56,13 @@ MinHeap *createMinHeap(unsigned capacity)
     mp->capacity = capacity;
     mp->size = 0;
     mp->array = (MinHeapNode **)malloc(mp->capacity * sizeof(MinHeapNode));
+    return mp;
 }
 
 // 交换最小堆的两个结点
 void swapMinHeapNode(MinHeapNode **a, MinHeapNode **b)
 {
-    MinHeapNode *t = a;
+    MinHeapNode *t = *a;
     *a = *b;
     *b = t;
 }
@@ -158,6 +159,30 @@ MinHeapNode *buildHuffmanTree(char data[], int freq[], int size)
 
     // 最后剩余的一个结点是根节点，树结构已经完整
     return  extractMin(mp);
+}
+
+void printArr(int arr[], int n)
+{
+    int i;
+    for(i = 0; i < n; i++)
+        printf("%d", arr[i]);
+    printf("\n");
+}
+
+void printCodes(MinHeapNode *root, int arr[], int top)
+{
+    if(root->left){
+        arr[top] = 0;
+        printCodes(root->left, arr, top + 1);
+    }
+    if(root->right){
+        arr[top] = 1;
+        printCodes(root->right, arr, top + 1);
+    }
+    if(isLeaf(root)){
+        printf("%c: ", root->data);
+        printArr(arr, top);
+    }
 }
 
 void HuffmanCodes(char data[], int freq[], int size)
