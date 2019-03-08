@@ -58,7 +58,7 @@ void addEdge(Graph *g, int src, int dest, int weight)
     new->next = g->array[src].head;
     g->array[src].head = new;
 
-    // 有向图
+    // 无向图
     new = newAdjListNode(src, weight);
     new->next = g->array[dest].head;
     g->array[dest].head = new;
@@ -66,7 +66,6 @@ void addEdge(Graph *g, int src, int dest, int weight)
 
 void setVertex(Graph *g, int idx, char *vertex)
 {
-    // TODO
     g->array[idx].vertex = vertex;
 }
 
@@ -83,26 +82,4 @@ void printGraph(Graph *g)
         }
         printf("\n");
     }
-}
-
-int main(int argc, char const *argv[])
-{
-    Graph *g = createGraph(5);
-    setVertex(g, 0, "A");
-    setVertex(g, 1, "B");
-    setVertex(g, 2, "C");
-    setVertex(g, 3, "D");
-    setVertex(g, 4, "E");
-
-    addEdge(g, 0, 1, 100);
-    addEdge(g, 0, 4, 100);
-    addEdge(g, 1, 2, 100);
-    addEdge(g, 1, 3, 100);
-    addEdge(g, 1, 4, 100);
-    addEdge(g, 2, 1, 100);
-    addEdge(g, 2, 3, 100);
-    addEdge(g, 3, 4, 100);
-
-    printGraph(g);
-    return 0;
 }
