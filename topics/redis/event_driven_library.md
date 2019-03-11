@@ -118,12 +118,12 @@ aeMain()
                 ->aeApiPoll()
                     // 先处理文件事件
                     ->ProcessFileEvents
-                    // 后处理时间事件
-                    ->processTimeEvents()
                         // 可读事件，调用读事件处理器
                         ->if(AE_READABLE)->*rfileProc()
                         // 可写事件，调用写事件处理器
                         ->if(AE_WRITABLE)->*wfileProc()
+                    // 后处理时间事件
+                    ->processTimeEvents()
 ```
 
 ## 4. 文件事件处理器
