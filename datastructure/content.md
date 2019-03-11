@@ -263,9 +263,42 @@ C 示例：
 
 <<<@/datastructure/graph_traversal.c
 
+### 最小生成树
+<i>什么是最小生成树？</i>
+
+对于一个连通的无向图来说，它的一个连通树就是该图的子图，这个子图连接了所有的顶点。一个图可以有很多不同的连通树。**最小生成树( Minimum Spanning Tree, MST)** 是带权无向连通图的一棵权和最小（或者其他所有连通树相等）的连通树。连通树的权值就是该连通树所有边的权值之和。
+
+<i>最小生成树有多少个边呢？</i>
+
+假设图由V个顶点，那么最小连通树由（V-1）个边。
+
+构造最小生成树的基本原则是：
+1. 只能使用该连通图的边来构造最小生成树；
+2. 只能使用并且仅能使用n-1条边来连接该连通图的n个顶点；
+3. 不能使用产生回路的边。
+   
+构造最小生成树的方法有很多种，比较典型的方法是**普利姆** 算法和**可如斯卡尔** 算法。
+
+#### 可如斯卡尔 Kruskal’s Minimum Spanning Tree Algorithm
+通过可如斯卡尔算法查找MST的步骤：
+1. 按权值大小升序排列所有的边；
+2. 选择最小的边。检查它是否和现有的树形成回路，如果没有则保留该边，所有弃用；
+3. 重复2直到生成树中有V-1条边。
+
+举一个例子：
+
+![kruskal](./images/kruskal_mst.png)
+
+
+
+
+#### 普利姆算法 Prim’s Minimum Spanning Tree (MST)
+
 
 
 ## 参考
 - [《数据结构教程(第3版) 唐发根编著》](https://item.jd.com/12106775.html)
 - [哈夫曼算法的理解及原理分析,算法实现,构造哈夫曼树的算法 - 全文](http://www.elecfans.com/rengongzhineng/600143_a.html)
 - [Huffman Coding](https://www.geeksforgeeks.org/huffman-coding-greedy-algo-3/)
+- [Kruskal’s Minimum Spanning Tree Algorithm](https://www.geeksforgeeks.org/?p=26604/)
+- [Prim’s Minimum Spanning Tree (MST)](https://www.geeksforgeeks.org/prims-minimum-spanning-tree-mst-greedy-algo-5/)
