@@ -289,8 +289,7 @@ C 示例：
 
 ![kruskal](./images/kruskal_mst.png)
 
-
-
+<<<@/datastructure/kruskal.c
 
 #### 普利姆算法 Prim’s Minimum Spanning Tree (MST)
 
