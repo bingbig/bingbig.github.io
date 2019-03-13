@@ -99,6 +99,7 @@ void KruskalMST(struct Graph *graph)
         int x = find(subsets, next_edge.src);
         int y = find(subsets, next_edge.dest);
 
+        // 如果这个边不会形成回路，则包含，否则不用该边
         if(x != y){
             result[e++] = next_edge;
             Union(subsets, x, y);
