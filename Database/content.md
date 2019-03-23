@@ -10,6 +10,7 @@ next: /Bioinformatics/content
 
 - [第1章 MySQL架构和历史](MySQL/hp/01.md)
 - [第2章 MySQL基准测试](MySQL/hp/02.md)
+- [第3章 服务器性能剖析](MySQL/hp/03.md)
 
 ### 其他相关MySQL
 - [LeetCode](MySQL/leetcode.md)
