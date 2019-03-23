@@ -308,11 +308,23 @@ C 示例：
 
 Key值只用于那些没有加入到MST中的顶点，这些顶点的Key与它们和MST顶点相连的权值最小的边相关。
 
+以下图为例，起始时mstSet是空的，所有的顶点的Key赋值为 {0, INF, INF, INF, INF, INF, INF, INF} ，INF表示无限大。
 
+![example_01](./images/kruskal_eg_1.jpg)
 
+选择key最小的的顶点。顶点0被选择，加入mstSet，mstSet成了{0}。加入mstSet后开始更新邻接顶点的key值，顶点0的连接顶点是1和7。更新1和7的key值为4和8。接下来选择key最小的邻接顶点，自然是顶点1，加入mstSet。更新邻接顶点的key。忽略key值为INF，图如下所示。
 
+![example_02](./images/kruskal_eg_2.jpg)
 
+依此类推。
 
+<<<@/datastructure/prim.c
+
+### 最短路径
+
+### AOV网与拓扑排序
+
+## 文件及查找
 
 
 ## 参考
