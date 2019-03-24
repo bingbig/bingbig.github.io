@@ -168,7 +168,6 @@ module.exports = {
             ],
             '/Database/': [
                 'content',
-                'MySQL/basic',
                 'MySQL/leetcode',
                 'MySQL/optimization',
                 'Redis/Redis',
