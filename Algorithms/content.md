@@ -6,7 +6,7 @@ sidebar: auto
 > 本话题参考： [GeeksforGeeks Alogorithms](https://www.geeksforgeeks.org/fundamentals-of-algorithms/)
 
 ## 搜索和排序
-1. [线性搜索](./searching.html#线性搜索)， [二分搜索](./searching.html#二分搜索), 
+1. [线性搜索](./searching.html#线性搜索)， [二分搜索](./searching.html#二分搜索)， [跳跃搜索](./searching.html#跳跃搜索)，
 
 ## 贪婪算法
 
