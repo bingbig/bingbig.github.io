@@ -93,3 +93,19 @@ arr[] = 64 25 12 22 11
 **Implementation**
 
 <<<@/algorithms/src/selection_sort.c
+
+### 冒泡排序
+冒泡排序是最近的排序算法：重复的将临近的两个错误排序的元素交换。
+
+**Implementation**
+
+<<<@/algorithms/src/bubble_sort.c
+
+### 插入排序
+原理如下：
+
+![插入排序](./images/insertionsort.png)
+
+**Implementation**
+
+<<<@/algorithms/src/insertion_sort.c

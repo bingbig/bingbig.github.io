@@ -1,0 +1,42 @@
+/**
+ * 冒泡排序
+ */ 
+#include <stdio.h>
+
+void swap(int *a, int *b)
+{
+    int tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+void bubbleSort(int arr[], int n)
+{
+    int i, j;
+    for(i = 0; i < n; i++)
+    {
+        for(j = 0; j < n - i - 1; j++)
+        {
+            if(arr[j] > arr[j+1])
+                swap(&arr[j], &arr[j+1]);
+        }
+    }
+}
+
+void printArray(int arr[], int n)
+{
+    int i;
+    for(i = 0; i < n; i++)
+        printf("%d\t", arr[i]);
+    printf("\n");
+}
+
+int main() 
+{ 
+    int arr[] = {64, 34, 25, 12, 22, 11, 90}; 
+    int n = sizeof(arr)/sizeof(arr[0]); 
+    bubbleSort(arr, n); 
+    printf("Sorted array: \n"); 
+    printArray(arr, n); 
+    return 0; 
+} 
