@@ -1,3 +1,7 @@
+---
+sidebar: auto
+---
+
 # 全局变量`server`
 
 头文件`server.h`
