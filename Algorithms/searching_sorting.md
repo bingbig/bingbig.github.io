@@ -109,3 +109,14 @@ arr[] = 64 25 12 22 11
 **Implementation**
 
 <<<@/algorithms/src/insertion_sort.c
+
+
+### 归并排序
+和快速排序一样，归并排序是一种分而治之的算法。它将数组分成两半，再对这两半进行归并排序，最后合并这两半。
+
+![归并排序](./images/Merge-Sort.png)
+
+**Implementation**
+
+<<<@/algorithms/src/merge_sort.c
+
