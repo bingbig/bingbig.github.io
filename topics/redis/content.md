@@ -7,6 +7,6 @@
 - [全局变量server](./server.md)
 - [Redis启动流程](./redisinit.md)
 - [Redis事件驱动](./event_driven_library.md)
-
+- [Redis 内存管理](./zmalloc.md)
 ## 网络
 - [anet网络封装](./anet.md)
