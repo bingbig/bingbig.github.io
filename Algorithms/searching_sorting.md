@@ -184,5 +184,248 @@ arr[] = 64 25 12 22 11
 默认的实现不稳定，但是任何的排序算法都可以通过考虑对索引进行比较来稳定算法。
 
 **什么是3-way快速排序？**
+在简单的快速排序算法，我们选择一个元素作为支点，围绕支点将数组分为左半部分和右半部分并递归地进行快速排序。
+
+当考虑到数组有许多重复的元素时，比如：{1, 4, 2, 4, 2, 4, 1, 2, 4, 1, 2, 2, 2, 2, 4, 1, 4, 4, 4}。如果我们选择4作为支点，用简单的快速排序算法排序时，我们只固定了一个4，然后对剩余的元素递归排序，在3-way快速排序中，数组被分为3部分，小于支点的，等于支点的，大于支点的。实现可以参考[这里](https://www.geeksforgeeks.org/3-way-quicksort-dutch-national-flag/)。
+
+**如何在链表中实现快速排序**
+- [在单链表中实现快排](https://www.geeksforgeeks.org/quicksort-on-singly-linked-list/)
+- [在双链表中实现快排](https://www.geeksforgeeks.org/quicksort-for-linked-list/)
+  
+**如何实现迭代快排？**
+```c
+/* arr[] --> Array to be sorted,  
+   l  --> Starting index,  
+   h  --> Ending index */
+void quickSortIterative (int arr[], int l, int h) 
+{ 
+    // Create an auxiliary stack 
+    int stack[ h - l + 1 ]; 
+  
+    // initialize top of stack 
+    int top = -1; 
+  
+    // push initial values of l and h to stack 
+    stack[ ++top ] = l; 
+    stack[ ++top ] = h; 
+  
+    // Keep popping from stack while is not empty 
+    while ( top >= 0 ) 
+    { 
+        // Pop h and l 
+        h = stack[ top-- ]; 
+        l = stack[ top-- ]; 
+  
+        // Set pivot element at its correct position 
+        // in sorted array 
+        int p = partition( arr, l, h ); 
+  
+        // If there are elements on left side of pivot, 
+        // then push left side to stack 
+        if ( p-1 > l ) 
+        { 
+            stack[ ++top ] = l; 
+            stack[ ++top ] = p - 1; 
+        } 
+  
+        // If there are elements on right side of pivot, 
+        // then push right side to stack 
+        if ( p+1 < h ) 
+        { 
+            stack[ ++top ] = p + 1; 
+            stack[ ++top ] = h; 
+        } 
+    } 
+}
+```
+参考：[迭代快排](https://www.geeksforgeeks.org/iterative-quick-sort/)
+
+**快排在数组排序上为何比归并排序好？**
+通常的快速排序是一个在位排序（不需要额外的存储空间），而归并排序需要O(N)的空间，N表示数组的大小。内存的分配和释放增加了归并排序的运行时间，比较平均复杂度我们可以发现两种类型的排序都有O(NlogN)的平均复杂度，但是实际中不同，归并排序输在了这而外的存储空间上。
+
+大多数的实际快发的快排实现中使用了随机的版本。随机版本的期望时间复杂度是O(nLogN)。
+
+当对数组排序时，快速排序是一种缓存友好型的排序算法。快排也是尾递归，如何优化尾递归呢？[看这里](https://www.geeksforgeeks.org/quicksort-tail-call-optimization-reducing-worst-case-space-log-n/)。
+
+**归并排序在链表排序上为何比快排好？**
+链表和数组的不同主要是在于内存的分配上。和数组不同，链表结点可能不会记录在相邻的内存上。在链表中插入一个元素的时间复杂度是O(1)，空间复杂度也是O(1)。因此归并排序的合并操作对于链表来说不需要额外的空间。
+
+### 基数排序
+基于比较的排序算法的下限是O(NlogN)，它们不可能优于NlogN。计数排序是一种线性排序算法，元素的分布居于1-k，时间复杂度为O(n+k).
+
+假如元素的分布区间是1到n<sup>2</sup>呢？我们就不能再使用计数排序了，因为时间复杂度已经成了O(n<sup>2</sup>)了。那我们还怎么在线性时间内对这样的数组排序呢？
+
+答案就是基数排序了！基数排序的思想就是通过一位一位的比较，从低位到高位比较。基数排序算法例子如下：
+
+**例子**:
+原始的没有排序的数组：
+
+`170, 45, 75, 90, 802, 24, 2, 66`
+
+按低位排序（即个位）: [*注意到 802 在 2的前面, 因为在原始数组中 802 出现在 2 的前面]
+
+`170, 90, 802, 2, 24, 45, 75, 66`
+
+按下一位排序（即十位）:
+
+`802, 2, 24, 45, 66, 170, 75, 90`
+
+按最高位排序 (千位) :
+
+`2, 24, 45, 66, 75, 90, 170, 802`
+
+**时间复杂度**
+基数排序时间复杂度为 O(d*(n+b)) ，d是数组元素的个数，b是数组的进制，如十进制，如果k是元素中的最大值，那么d =  O(logb(k))。
+
+**Implementation**
+```c
+// C++ implementation of Radix Sort 
+#include<iostream> 
+using namespace std; 
+
+// A utility function to get maximum value in arr[] 
+int getMax(int arr[], int n) 
+{ 
+	int mx = arr[0]; 
+	for (int i = 1; i < n; i++) 
+		if (arr[i] > mx) 
+			mx = arr[i]; 
+	return mx; 
+} 
+
+// A function to do counting sort of arr[] according to 
+// the digit represented by exp. 
+void countSort(int arr[], int n, int exp) 
+{ 
+	int output[n]; // output array 
+	int i, count[10] = {0}; 
+
+	// Store count of occurrences in count[] 
+	for (i = 0; i < n; i++) 
+		count[ (arr[i]/exp)%10 ]++; 
+
+	// Change count[i] so that count[i] now contains actual 
+	// position of this digit in output[] 
+	for (i = 1; i < 10; i++) 
+		count[i] += count[i - 1]; 
+
+	// Build the output array 
+	for (i = n - 1; i >= 0; i--) 
+	{ 
+		output[count[ (arr[i]/exp)%10 ] - 1] = arr[i]; 
+		count[ (arr[i]/exp)%10 ]--; 
+	} 
+
+	// Copy the output array to arr[], so that arr[] now 
+	// contains sorted numbers according to current digit 
+	for (i = 0; i < n; i++) 
+		arr[i] = output[i]; 
+} 
+
+// The main function to that sorts arr[] of size n using 
+// Radix Sort 
+void radixsort(int arr[], int n) 
+{ 
+	// Find the maximum number to know number of digits 
+	int m = getMax(arr, n); 
+
+	// Do counting sort for every digit. Note that instead 
+	// of passing digit number, exp is passed. exp is 10^i 
+	// where i is current digit number 
+	for (int exp = 1; m/exp > 0; exp *= 10) 
+		countSort(arr, n, exp); 
+} 
+
+// A utility function to print an array 
+void print(int arr[], int n) 
+{ 
+	for (int i = 0; i < n; i++) 
+		cout << arr[i] << " "; 
+} 
+
+// Driver program to test above functions 
+int main() 
+{ 
+	int arr[] = {170, 45, 75, 90, 802, 24, 2, 66}; 
+	int n = sizeof(arr)/sizeof(arr[0]); 
+	radixsort(arr, n); 
+	print(arr, n); 
+	return 0; 
+} 
+```
+
+### 计数排序
+计数排序原理是利用了值分布在一定的范围内。
+
+**Implementation**
+```c
+// C++ Program for counting sort 
+#include<bits/stdc++.h> 
+#include<string.h> 
+using namespace std; 
+#define RANGE 255 
+
+// The main function that sort 
+// the given string arr[] in 
+// alphabatical order 
+void countSort(char arr[]) 
+{ 
+	// The output character array 
+	// that will have sorted arr 
+	char output[strlen(arr)]; 
+
+	// Create a count array to store count of inidividul 
+	// characters and initialize count array as 0 
+	int count[RANGE + 1], i; 
+	memset(count, 0, sizeof(count)); 
+
+	// Store count of each character 
+	for(i = 0; arr[i]; ++i) 
+		++count[arr[i]]; 
+
+	// Change count[i] so that count[i] now contains actual 
+	// position of this character in output array 
+	for (i = 1; i <= RANGE; ++i) 
+		count[i] += count[i-1]; 
+
+	// Build the output character array 
+	for (i = 0; arr[i]; ++i) 
+	{ 
+		output[count[arr[i]]-1] = arr[i]; 
+		--count[arr[i]]; 
+	} 
+
+	/* 
+	For Stable algorithm 
+	for (i = sizeof(arr)-1; i>=0; --i) 
+	{ 
+		output[count[arr[i]]-1] = arr[i]; 
+		--count[arr[i]]; 
+	} 
+	
+	For Logic : See implementation 
+	*/
+
+	// Copy the output array to arr, so that arr now 
+	// contains sorted characters 
+	for (i = 0; arr[i]; ++i) 
+		arr[i] = output[i]; 
+} 
+
+// Driver code 
+int main() 
+{ 
+	char arr[] = "geeksforgeeks"; 
+
+	countSort(arr); 
+
+	cout<< "Sorted character array is " << arr; 
+	return 0; 
+} 
+
+// This code is contributed by rathbhupendra 
+
+```
+参考：[这里](https://www.geeksforgeeks.org/counting-sort/)
 
 
