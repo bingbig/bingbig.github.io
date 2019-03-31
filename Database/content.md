@@ -12,6 +12,7 @@ next: /Bioinformatics/content
 - [第2章 MySQL基准测试](MySQL/hp/02.md)
 - [第3章 服务器性能剖析](MySQL/hp/03.md)
 - [第4章 Schema与数据类型优化](MySQL/hp/04.md)
+- [第5章 创建高性能的索引](MySQL/hp/05.md)
 
 ### 其他相关MySQL
 - [LeetCode](MySQL/leetcode.md)
