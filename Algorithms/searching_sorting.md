@@ -487,4 +487,136 @@ int main()
 ```
 
 ### 希尔排序
+希尔排序是插入排序的一种变体。在插入排序中，我们将元素只向前移动一个位置。当一个元素需要向前移动很多次时，就需要多次的操作。希尔排序的思想是允许和后面的元素交换。过程如下图所示：
 
+![希尔排序](./images/shell-sort.png)
+
+图片来源：[链接](https://www.cnblogs.com/chengxiao/p/6104371.html)
+
+**Implementation**
+```c
+// C++ implementation of Shell Sort 
+#include <iostream> 
+using namespace std; 
+
+/* function to sort arr using shellSort */
+int shellSort(int arr[], int n) 
+{ 
+	// Start with a big gap, then reduce the gap 
+	for (int gap = n/2; gap > 0; gap /= 2) 
+	{ 
+		// Do a gapped insertion sort for this gap size. 
+		// The first gap elements a[0..gap-1] are already in gapped order 
+		// keep adding one more element until the entire array is 
+		// gap sorted 
+		for (int i = gap; i < n; i += 1) 
+		{ 
+			// add a[i] to the elements that have been gap sorted 
+			// save a[i] in temp and make a hole at position i 
+			int temp = arr[i]; 
+
+			// shift earlier gap-sorted elements up until the correct 
+			// location for a[i] is found 
+			int j;			 
+			for (j = i; j >= gap && arr[j - gap] > temp; j -= gap) 
+				arr[j] = arr[j - gap]; 
+			
+			// put temp (the original a[i]) in its correct location 
+			arr[j] = temp; 
+		} 
+	} 
+	return 0; 
+} 
+
+void printArray(int arr[], int n) 
+{ 
+	for (int i=0; i<n; i++) 
+		cout << arr[i] << " "; 
+} 
+
+int main() 
+{ 
+	int arr[] = {12, 34, 54, 2, 3}, i; 
+	int n = sizeof(arr)/sizeof(arr[0]); 
+
+	cout << "Array before sorting: \n"; 
+	printArray(arr, n); 
+
+	shellSort(arr, n); 
+
+	cout << "\nArray after sorting: \n"; 
+	printArray(arr, n); 
+
+	return 0; 
+} 
+
+```
+
+### 梳子排序
+梳子排序是冒泡排序的优化版本。冒泡排序总是比较临近的元素。梳子排序通过大于1的gap优化冒泡排序，gap从一个大的值，每次迭代时缩减，直至值为1，缩减因子为1.3[Source: Wiki](https://en.wikipedia.org/wiki/Comb_sort)。
+
+**Implementation**
+```c
+// C++ implementation of Comb Sort 
+#include<bits/stdc++.h> 
+using namespace std; 
+
+// To find gap between elements 
+int getNextGap(int gap) 
+{ 
+	// Shrink gap by Shrink factor 
+	gap = (gap*10)/13; 
+
+	if (gap < 1) 
+		return 1; 
+	return gap; 
+} 
+
+// Function to sort a[0..n-1] using Comb Sort 
+void combSort(int a[], int n) 
+{ 
+	// Initialize gap 
+	int gap = n; 
+
+	// Initialize swapped as true to make sure that 
+	// loop runs 
+	bool swapped = true; 
+
+	// Keep running while gap is more than 1 and last 
+	// iteration caused a swap 
+	while (gap != 1 || swapped == true) 
+	{ 
+		// Find next gap 
+		gap = getNextGap(gap); 
+
+		// Initialize swapped as false so that we can 
+		// check if swap happened or not 
+		swapped = false; 
+
+		// Compare all elements with current gap 
+		for (int i=0; i<n-gap; i++) 
+		{ 
+			if (a[i] > a[i+gap]) 
+			{ 
+				swap(a[i], a[i+gap]); 
+				swapped = true; 
+			} 
+		} 
+	} 
+} 
+
+// Driver program 
+int main() 
+{ 
+	int a[] = {8, 4, 1, 56, 3, -44, 23, -6, 28, 0}; 
+	int n = sizeof(a)/sizeof(a[0]); 
+
+	combSort(a, n); 
+
+	printf("Sorted array: \n"); 
+	for (int i=0; i<n; i++) 
+		printf("%d ", a[i]); 
+
+	return 0; 
+} 
+```
