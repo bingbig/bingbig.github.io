@@ -177,16 +177,99 @@ sds sdscat(sds s, const char *t) {
 `sdscatlen`
 ```c
 sds sdscatlen(sds s, const void *t, size_t len) {
+    // 获取当前SDS的长度，sdshdr->len
     size_t curlen = sdslen(s);
 
     s = sdsMakeRoomFor(s,len);
     if (s == NULL) return NULL;
+    // 将目标字符串的内容复制到原SDS后面
     memcpy(s+curlen, t, len);
+    // 重新设置sds的长度，即更新sdshdr->len
     sdssetlen(s, curlen+len);
+    // sds后面加上'\0'
     s[curlen+len] = '\0';
     return s;
 }
 ```
+`sdscatlen`函数的核心是`sdsMakeRoomFor`，它是如何杜绝SDS缓冲区溢出的呢？
+
+```c
+sds sdsMakeRoomFor(sds s, size_t addlen) {
+    void *sh, *newsh;
+    // 计算SDS剩余缓存大小： sdshdr->alloc - sdshdr->len
+    size_t avail = sdsavail(s);
+    size_t len, newlen;
+    char type, oldtype = s[-1] & SDS_TYPE_MASK;
+    int hdrlen;
+
+    /* 剩余空间足够addlen长度字符的加入，立即返回 */
+    if (avail >= addlen) return s;
+
+    // 当前SDS使用了的长度 sdshdr->len
+    len = sdslen(s);
+    // 获取SDS的sdshdr结构体的指针
+    sh = (char*)s-sdsHdrSize(oldtype);
+    newlen = (len+addlen);
+    // SDS_MAX_PREALLOC： 字符串最大的预分配长度是1M
+    if (newlen < SDS_MAX_PREALLOC)
+        newlen *= 2;
+    else
+        newlen += SDS_MAX_PREALLOC;
+
+    // 根据新的sds字符串的长度重新计算sdshdr的类型
+    type = sdsReqType(newlen);
+
+    /* Don't use type 5: the user is appending to the string and type 5 is
+     * not able to remember empty space, so sdsMakeRoomFor() must be called
+     * at every appending operation. */
+    if (type == SDS_TYPE_5) type = SDS_TYPE_8;
+
+    // sdshdr结构体的长度
+    hdrlen = sdsHdrSize(type);
+    // sdshdr类型没有变，对sdshdr realloc扩容即可
+    if (oldtype==type) {
+        newsh = s_realloc(sh, hdrlen+newlen+1);
+        if (newsh == NULL) return NULL;
+        s = (char*)newsh+hdrlen;
+    } else {
+        /* Since the header size changes, need to move the string forward,
+         * and can't use realloc */
+        // sdshdr的类型和大小都变了需要创建一个新的sdshdr
+        newsh = s_malloc(hdrlen+newlen+1);
+        if (newsh == NULL) return NULL;
+        // 将s复制到新的sdshdr后面的sds中
+        memcpy((char*)newsh+hdrlen, s, len+1);
+        // 回收旧的sdshdr
+        s_free(sh);
+        // 新的sds指针
+        s = (char*)newsh+hdrlen;
+        // 设置sdshdr的类别
+        s[-1] = type;
+        // 设置新的sdshdr的长度成员, sdshdr->len
+        sdssetlen(s, len);
+    }
+    sdssetalloc(s, newlen);
+    return s;
+}
+```
+描述`sdsMakeRoomFor()`，可以简而言之：原SDS剩余空间够用，直接返回；空间不够，则重新创建一个新的sdshdr，将原SDS复制到新的sdshdr后的SDS中。
+
+关于扩容长度策略：
+1. 当修改后SDS字符串长度小于 `SDS_MAX_PREALLOC`（1M）时，扩容长度为修改后字符串长度的两倍。
+2. 当修改后的SDS字符串长度大于`SDS_MAX_PREALLOC`时，扩容的长度为修改后字符串长度加上`SDS_MAX_PREALLOC`,即新的字符长度+1m大小。
+
+和`sdsMakeRoomFor()`函数相反，SDS时通过`sdsRemoveFreeSpace()`函数实现惰性空间释放。其原理于前者类似，sdshdr类型不变时，直接`realloc`，类型发生了变化时，创建一个新的sdshdr，将sds复制到新的sdshdr后面，回收旧的sdshdr。
+
+### SDS和C字符串的区别
+SDS相对于C字符串有以下优势：
+1. 常数复杂度获取字符串长度
+2. 杜绝缓冲区溢出
+3. 减少修改字符串时带来的内存重分配次数
+4. 二进制安全
+5. 兼容部分C字符串函数，如 `printf("%s", s->buf);`。
+
+## 链表
+
 
 
 
