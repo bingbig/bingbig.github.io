@@ -268,6 +268,13 @@ SDS相对于C字符串有以下优势：
 4. 二进制安全
 5. 兼容部分C字符串函数，如 `printf("%s", s->buf);`。
 
+### 编译
+Redis SDS可以作为独立的模块使用。编译测试：
+
+```shell
+gcc -DSDS_TEST_MAIN -o sds sds.c zmalloc.c
+```
+
 ## 链表
 作为一种常用数据结构，C 语言并没有内置这种数据结构，所以 Redis 构建了自己的链表实现。
 > 相关源文件： [adlist.h](https://github.com/antirez/redis/blob/5.0/src/adlist.h), [adlist.c](https://github.com/antirez/redis/blob/5.0/src/adlist.c), [zmalloc.h](https://github.com/antirez/redis/blob/5.0/src/zmalloc.h) 
@@ -303,17 +310,52 @@ typedef struct list {
 ```
 Redis链表的实现和常规的类似，不同的是，`list`结构体中有定义的三个指针函数成员`dup` 、`free` 和 `match`，用于指定实现多态链表所需的类型特定函数。
 
-Redis链表的特点：
+### Redis链表的特点
 1. 双端无环，带表头指针和表尾指针
 2. 链表长度获取时间复杂度O(1)
 3. 多态，链表节点使用 `void*` 指针来保存节点值， 并且可以通过 `list` 结构的 `dup` 、 `free` 、 `match` 三个属性为节点值设置类型特定函数， 所以链表可以用于保存各种不同类型的值。
 
+### 编译
+同样，Redis的链表作为Redis的基本数据结构也可以单独作为模块使用。
+
+## 字典
+Redis的字典使用的哈希表作为底层实现的，一个哈希表里面可以由多个哈希表节点，每个节点保存了字典中的一个键值对。
+> 相关源文件： [dict.h](https://github.com/antirez/redis/blob/5.0/src/dict.h), [dict.c](https://github.com/antirez/redis/blob/5.0/src/dict.c), [zmalloc.h](https://github.com/antirez/redis/blob/5.0/src/zmalloc.h) , [fmacros.h](https://github.com/antirez/redis/blob/5.0/src/fmacros.h), [sds.c](https://github.com/antirez/redis/blob/5.0/src/sds.h), [siphash.c](https://github.com/antirez/redis/blob/5.0/src/siphash.h)
+
+如下图所示展示了一个普通状态下Redis的字典结构：
+
+![普通状态下Redis的字典](./images/redis_dict.png)
+
+```c
+typedef struct dict {           /* 字典的结构 */
+    dictType *type;             /* 类型特定函数 */
+    void *privdata;             /* 私有数据 */
+    dictht ht[2];               /* 二元哈希表 */
+    long rehashidx;             /* rehash索引进度，值为-1时表示没有在进行rehash */
+    unsigned long iterators;    /* 当前运行的迭代器个数 */
+} dict;
+```
+
+`ht`成员是一个两个元素的数组，数组中的每个项都是一个`dictht`哈希表，一般情况下，字典只使用 `ht[0]` 哈希表， `ht[1]` 哈希表只会在对 `ht[0] `哈希表进行 `rehash` 时使用。`rehashidx` 记录着当前字典`rehash`索引进度，值为-1时表示没有在进行`rehash`。Redis的哈希表结构体`dicht`，其结构如下：
+
+```c
+typedef struct dictht {         /* 哈希表的结构 */
+    dictEntry **table;          /* 哈希表数组，每个元素都是指向dictEntry的指针 */
+    unsigned long size;         /* 哈希表的大小 */
+    unsigned long sizemask;     /* 哈希表大小掩码，用于计算索引值，总是等于size-1*/
+    unsigned long used;         /* 该哈希表已有的节点（键值对）数目 */
+} dictht;
+```
+起始元素个数为 DICT_HT_INITIAL_SIZE
 
 
 
+### 编译
+Redis字典依赖于SDS，可以通过下面的方法编译测试。
 
-
-
+```shell
+gcc -DDICT_BENCHMARK_MAIN -o dict dict.c sds.c zmalloc.c siphash.c 
+```
 
 
 ## 参考
