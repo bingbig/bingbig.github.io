@@ -6,7 +6,7 @@ sidebar: auto
 
 ## 简单动态字符串
 Redis没有直接使用C里面的字符串，而是构建了一种名为简单动态字符串(Simple dynamic strings, SDS)的抽象类型，并且作为Redis的默认字符串表示。
-> 相关源码： [sds.c](https://github.com/antirez/redis/blob/5.0/src/sds.c), [sds.h](https://github.com/antirez/redis/blob/5.0/src/sds.h), [sdsalloc.h](https://github.com/antirez/redis/blob/5.0/src/sdsalloc.h), [zmalloc.c](https://github.com/antirez/redis/blob/5.0/src/zmalloc.c), [zmalloc.h](https://github.com/antirez/redis/blob/5.0/src/zmalloc.h)
+> 相关源文件： [sds.c](https://github.com/antirez/redis/blob/5.0/src/sds.c), [sds.h](https://github.com/antirez/redis/blob/5.0/src/sds.h), [sdsalloc.h](https://github.com/antirez/redis/blob/5.0/src/sdsalloc.h), [zmalloc.c](https://github.com/antirez/redis/blob/5.0/src/zmalloc.c), [zmalloc.h](https://github.com/antirez/redis/blob/5.0/src/zmalloc.h)
 
 ### 数据结构
 `sdsalloc.h`很简单，只是引入了SDS的内存管理模块而已（源码如下）。而真正的内存管理是在`zmalloc.h`和`zmalloc.c`中定义和实现的，具体实现请看[这里](./zmalloc.md)。
@@ -269,6 +269,59 @@ SDS相对于C字符串有以下优势：
 5. 兼容部分C字符串函数，如 `printf("%s", s->buf);`。
 
 ## 链表
+作为一种常用数据结构，C 语言并没有内置这种数据结构，所以 Redis 构建了自己的链表实现。
+> 相关源文件： [adlist.h](https://github.com/antirez/redis/blob/5.0/src/adlist.h), [adlist.c](https://github.com/antirez/redis/blob/5.0/src/adlist.c), [zmalloc.h](https://github.com/antirez/redis/blob/5.0/src/zmalloc.h) 
+
+Redis的链表是一个双向链表，使用list结构持有链表。
+```c
+typedef struct listNode {
+    struct listNode *prev;
+    struct listNode *next;
+    void *value;
+} listNode;
+
+typedef struct listIter {
+    listNode *next;
+    int direction;
+} listIter;
+
+/* 使用list持有链表 */
+typedef struct list {
+    // 表头节点
+    listNode *head;
+    // 表尾节点
+    listNode *tail;
+    // 链表所包含的节点数量
+    unsigned long len;
+    // 节点值复制函数
+    void *(*dup)(void *ptr);
+    // 节点值释放函数
+    void (*free)(void *ptr);
+    // 节点值对比函数
+    int (*match)(void *ptr, void *key);
+} list;
+```
+Redis链表的实现和常规的类似，不同的是，`list`结构体中有定义的三个指针函数成员`dup` 、`free` 和 `match`，用于指定实现多态链表所需的类型特定函数。
+
+Redis链表的特点：
+1. 双端无环，带表头指针和表尾指针
+2. 链表长度获取时间复杂度O(1)
+3. 多态，链表节点使用 `void*` 指针来保存节点值， 并且可以通过 `list` 结构的 `dup` 、 `free` 、 `match` 三个属性为节点值设置类型特定函数， 所以链表可以用于保存各种不同类型的值。
+
+
+
+
+
+
+
+
+
+## 参考
+1. [Redis 设计与实现](http://redisbook.com/)
+
+
+
+
 
 
 
