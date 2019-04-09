@@ -822,7 +822,7 @@ dictEntry *dictFind(dict *d, const void *key)
 ```
 
 ### 迭代器
-当字典中的键值对数据很大时，可能会使用迭代器分配遍历值（`hscan`）。redis字典的迭代器分为两种，一种是safe迭代器另一种是unsafe迭代器，safe迭代器在迭代的过程中用户可以对该dict进行CURD操作，unsafe迭代器在迭代过程中用户只能对该dict执行迭代操作。
+当字典中的键值对数据很大时，可能会使用迭代器分配遍历值（`hscan`或者`scan`遍历redis中的所有键）。redis字典的迭代器分为两种，一种是safe迭代器另一种是unsafe迭代器，safe迭代器在迭代的过程中用户可以对该dict进行CURD操作，unsafe迭代器在迭代过程中用户只能对该dict执行迭代操作。
 
 当对字典执行safe迭代时会停止rehash操作以免扰乱迭代器的迭代。
 ```c
