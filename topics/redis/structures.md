@@ -268,7 +268,7 @@ SDS相对于C字符串有以下优势：
 4. 二进制安全
 5. 兼容部分C字符串函数，如 `printf("%s", s->buf);`。
 
-### 编译
+### 编译测试
 Redis SDS可以作为独立的模块使用。编译测试：
 
 ```shell
@@ -315,7 +315,7 @@ Redis链表的实现和常规的类似，不同的是，`list`结构体中有定
 2. 链表长度获取时间复杂度O(1)
 3. 多态，链表节点使用 `void*` 指针来保存节点值， 并且可以通过 `list` 结构的 `dup` 、 `free` 、 `match` 三个属性为节点值设置类型特定函数， 所以链表可以用于保存各种不同类型的值。
 
-### 编译
+### 编译测试
 同样，Redis的链表作为Redis的基本数据结构也可以单独作为模块使用。
 
 ## 字典
@@ -460,7 +460,7 @@ int dictExpand(dict *d, unsigned long size)
 
 redis的rehash有两种策略：
 
-- 定时执行：调用`dictRehashMilliseconds()`执行一毫秒的rehash。在redis的`serverCron`里调用，每次执行1ms的`dictRehash()`
+- 定时执行：调用`dictRehashMilliseconds()`执行一毫秒的rehash。在redis的`serverCron`里调用，每次执行1ms的`dictRehash()`，一般redis运行时用的字典结构会采用这种方法rehash，如`redisDb`结构体中的`dict`类型的成员。
 - 被动执行：字典调用`dictAddRaw()`,`dictGenericDelete()`，`dicFind()`, `dictGetSomeKeys()`，`dictGetRandomKey()`等函数时，会调用`_dictRehashStep`，迁移buckets中的一个非空bucket（或者跳过100个空的bucket）。
 
 ```c
@@ -554,8 +554,496 @@ rehash过程包括将一个bucket（有可能包含多个key，这些key以链�
 
 当 `d->ht[0].used == 0` 时rehash结束，`rehashidx`重新设置为 -1。
 
+### 字典的基本操作
+#### 创建字典
 
-### 编译
+```c
+/* Reset a hash table already initialized with ht_init().
+ * NOTE: This function should only be called by ht_destroy(). */
+static void _dictReset(dictht *ht) /* 初始化dictht表结构 */
+{
+    ht->table = NULL;
+    ht->size = 0;
+    ht->sizemask = 0;
+    ht->used = 0;
+}
+
+/* Create a new hash table */
+dict *dictCreate(dictType *type, void *privDataPtr)
+{
+    dict *d = zmalloc(sizeof(*d));
+
+    _dictInit(d,type,privDataPtr);
+    return d;
+}
+
+/* 初始化字典结构体 */
+int _dictInit(dict *d, dictType *type, void *privDataPtr)
+{
+    _dictReset(&d->ht[0]);
+    _dictReset(&d->ht[1]);
+    d->type = type;
+    d->privdata = privDataPtr;
+    d->rehashidx = -1;
+    d->iterators = 0;
+    return DICT_OK;
+}
+```
+`dictCreate()`函数创建一个新的字典，并对所有的成员设置了初始值，其中`ht`的两个元素都设置为`NULL`。
+
+#### 插入一个键值对
+```dictAdd()```方法用于插入一个键值对。
+
+```c
+/* Add an element to the target hash table */
+int dictAdd(dict *d, void *key, void *val)
+{
+    dictEntry *entry = dictAddRaw(d,key,NULL);
+
+    if (!entry) return DICT_ERR;
+    dictSetVal(d, entry, val);
+    return DICT_OK;
+}
+
+/* Low level add or find:
+ * This function adds the entry but instead of setting a value returns the
+ * dictEntry structure to the user, that will make sure to fill the value
+ * field as he wishes.
+ *
+ * This function is also directly exposed to the user API to be called
+ * mainly in order to store non-pointers inside the hash value, example:
+ *
+ * entry = dictAddRaw(dict,mykey,NULL);
+ * if (entry != NULL) dictSetSignedIntegerVal(entry,1000);
+ *
+ * Return values:
+ *
+ * If key already exists NULL is returned, and "*existing" is populated
+ * with the existing entry if existing is not NULL.
+ *
+ * If key was added, the hash entry is returned to be manipulated by the caller.
+ */
+dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
+{
+    long index;
+    dictEntry *entry;
+    dictht *ht;
+
+    if (dictIsRehashing(d)) _dictRehashStep(d);
+
+    /* Get the index of the new element, or -1 if
+     * the element already exists. */
+    if ((index = _dictKeyIndex(d, key, dictHashKey(d,key), existing)) == -1)
+        return NULL;
+
+    /* Allocate the memory and store the new entry.
+     * Insert the element in top, with the assumption that in a database
+     * system it is more likely that recently added entries are accessed
+     * more frequently. */
+    ht = dictIsRehashing(d) ? &d->ht[1] : &d->ht[0];
+    entry = zmalloc(sizeof(*entry));
+    /* 新的键值对插入链表的头部 */
+    entry->next = ht->table[index];
+    ht->table[index] = entry;
+    ht->used++;
+
+    /* Set the hash entry fields. */
+    dictSetKey(d, entry, key);
+    return entry;
+}
+```
+插入一个新的键值对的过程如下：
+1. 如果要插入的字典正在rehash，执行一步rehash（调用`_dictRehashStep()`）
+2. 如果这个key在字典中存在，插入函数`dictAdd()`直接返回错误`DICT_ERR`；如果不存在，`dictAddRaw()`新建一个`dictEntry`结构体并插入到对应bucket链表的头部，并调用`dictSetKey()`设置`dictEntry`的key的值。其中有一个细节，当字典在rehash时，新的键值对插入到`ht[1].table`中。
+3. 如果成功插入了一个新的`dictEntry`，`dictAdd()`调用`dictSetVal()`设置这个键值对的值。
+
+判断key是否在字典中存在并找到索引是通过`_dictKeyIndex()`函数实现的：
+```c
+/* Returns the index of a free slot that can be populated with
+ * a hash entry for the given 'key'.
+ * If the key already exists, -1 is returned
+ * and the optional output parameter may be filled.
+ *
+ * Note that if we are in the process of rehashing the hash table, the
+ * index is always returned in the context of the second (new) hash table. */
+static long _dictKeyIndex(dict *d, const void *key, uint64_t hash, dictEntry **existing)
+{
+    unsigned long idx, table;
+    dictEntry *he;
+    if (existing) *existing = NULL; /* 判断existing是否为空指针，如果是则将其指向的值设为NULL */
+
+    /* Expand the hash table if needed */
+    if (_dictExpandIfNeeded(d) == DICT_ERR)
+        return -1;
+    for (table = 0; table <= 1; table++) {
+        idx = hash & d->ht[table].sizemask; /* 用hash值与掩码进行与操作得出索引值 */
+        /* Search if this slot does not already contain the given key */
+        he = d->ht[table].table[idx];   /* 当前索引下的dictEntry */
+        while(he) { /* 遍历查找相同key的dictEntry */
+            if (key==he->key || dictCompareKeys(d, key, he->key)) {
+                if (existing) *existing = he; /* 如果existing不是空指针，将其指向找到的dictEntry */
+                return -1;
+            }
+            he = he->next;
+        }
+        if (!dictIsRehashing(d)) break; /* 如果没有在rehashing，则遍历ht[1] */
+    }
+    return idx;
+}
+```
+`existing` 是一个可选的输出参数，如果key存在，该指针指向找到的键值对`dictEntry`。查找的逻辑如下：
+1. 如果在`ht[1].table`中查找存在该key对应的索引
+2. 如果相应的bucket不为空时，遍历的bucket中的`DictEntry`链表以查找相同key值的`DictEntry`
+3. 如果该字典在rehash中，如果没有找到还需遍历ht[1]
+4. 如果找到了，`existing`不为`NULL`时将`existing`指向找到的`DictEntry`，并返回索引；没有找到则返回-1
+
+设置键值对的key和value的值的方法`dictSetKey()`和`dictSetVal()`是宏函数：
+```c
+#define dictSetKey(d, entry, _key_) do { \
+    if ((d)->type->keyDup) \
+        (entry)->key = (d)->type->keyDup((d)->privdata, _key_); \
+    else \
+        (entry)->key = (_key_); \
+} while(0)
+
+#define dictSetVal(d, entry, _val_) do { \
+    if ((d)->type->valDup) \
+        (entry)->v.val = (d)->type->valDup((d)->privdata, _val_); \
+    else \
+        (entry)->v.val = (_val_); \
+} while(0)
+```
+
+#### 删除一个键值对
+```c
+/* Search and remove an element. This is an helper function for
+ * dictDelete() and dictUnlink(), please check the top comment
+ * of those functions. */
+static dictEntry *dictGenericDelete(dict *d, const void *key, int nofree) {
+    uint64_t h, idx;
+    dictEntry *he, *prevHe;
+    int table;
+
+    if (d->ht[0].used == 0 && d->ht[1].used == 0) return NULL;
+
+    if (dictIsRehashing(d)) _dictRehashStep(d);
+    h = dictHashKey(d, key);
+
+    for (table = 0; table <= 1; table++) {
+        idx = h & d->ht[table].sizemask;
+        he = d->ht[table].table[idx];
+        prevHe = NULL;
+        while(he) {
+            if (key==he->key || dictCompareKeys(d, key, he->key)) {
+                /* Unlink the element from the list */
+                if (prevHe)
+                    prevHe->next = he->next;
+                else
+                    d->ht[table].table[idx] = he->next;
+                if (!nofree) {
+                    dictFreeKey(d, he);
+                    dictFreeVal(d, he);
+                    zfree(he);
+                }
+                d->ht[table].used--;
+                return he;
+            }
+            prevHe = he;
+            he = he->next;
+        }
+        if (!dictIsRehashing(d)) break;
+    }
+    return NULL; /* not found */
+}
+
+/* Remove an element, returning DICT_OK on success or DICT_ERR if the
+ * element was not found. */
+int dictDelete(dict *ht, const void *key) {
+    return dictGenericDelete(ht,key,0) ? DICT_OK : DICT_ERR;
+}
+```
+删除一个键值对的过程比较简单，就是找到相应的key，将从链表中删除这个`DictEntry`并调用`dictFreeKey()`，`dictFreeVal()`和`zfree()`回收内存。同时还要对哈希表的`used`成员执行自减操作。
+
+#### 修改一个键值对的值
+实现了上述操作后，修改一个键值对变得简单的多。调用`dictAddRaw()`找到相应的`dictEntry`，设置新的值并回收旧值占用的内存。
+```c
+/* Add or Overwrite:
+ * Add an element, discarding the old value if the key already exists.
+ * Return 1 if the key was added from scratch, 0 if there was already an
+ * element with such key and dictReplace() just performed a value update
+ * operation. */
+int dictReplace(dict *d, void *key, void *val)
+{
+    dictEntry *entry, *existing, auxentry;
+
+    /* Try to add the element. If the key
+     * does not exists dictAdd will succeed. */
+    entry = dictAddRaw(d,key,&existing);
+    if (entry) {
+        dictSetVal(d, entry, val);
+        return 1;
+    }
+
+    /* Set the new value and free the old one. Note that it is important
+     * to do that in this order, as the value may just be exactly the same
+     * as the previous one. In this context, think to reference counting,
+     * you want to increment (set), and then decrement (free), and not the
+     * reverse. */
+    auxentry = *existing;
+    dictSetVal(d, existing, val);
+    dictFreeVal(d, &auxentry);
+    return 0;
+}
+```
+
+#### 根据key查找
+根据key查找`dictEnty`的方法`dictFind()`类似于前面提到的`_dictKeyIndex()`。
+```c
+dictEntry *dictFind(dict *d, const void *key)
+{
+    dictEntry *he;
+    uint64_t h, idx, table;
+
+    if (d->ht[0].used + d->ht[1].used == 0) return NULL; /* dict is empty */
+    if (dictIsRehashing(d)) _dictRehashStep(d);
+    h = dictHashKey(d, key);
+    for (table = 0; table <= 1; table++) {
+        idx = h & d->ht[table].sizemask;
+        he = d->ht[table].table[idx];
+        while(he) {
+            if (key==he->key || dictCompareKeys(d, key, he->key))
+                return he;
+            he = he->next;
+        }
+        if (!dictIsRehashing(d)) return NULL;
+    }
+    return NULL;
+}
+```
+
+### 迭代器
+当字典中的键值对数据很大时，可能会使用迭代器分配遍历值（`hscan`）。redis字典的迭代器分为两种，一种是safe迭代器另一种是unsafe迭代器，safe迭代器在迭代的过程中用户可以对该dict进行CURD操作，unsafe迭代器在迭代过程中用户只能对该dict执行迭代操作。
+
+当对字典执行safe迭代时会停止rehash操作以免扰乱迭代器的迭代。
+```c
+static void _dictRehashStep(dict *d) {
+    if (d->iterators == 0) dictRehash(d,1);
+}
+```
+
+unsafe迭代器在执行迭代过程中不允许对字典进行其他操作，通过计算指纹来判断字典是否发生了变化，若不一致，则结束进程。
+```c
+/* A fingerprint is a 64 bit number that represents the state of the dictionary
+ * at a given time, it's just a few dict properties xored together.
+ * When an unsafe iterator is initialized, we get the dict fingerprint, and check
+ * the fingerprint again when the iterator is released.
+ * If the two fingerprints are different it means that the user of the iterator
+ * performed forbidden operations against the dictionary while iterating. */
+long long dictFingerprint(dict *d) {
+    long long integers[6], hash = 0;
+    int j;
+
+    integers[0] = (long) d->ht[0].table;
+    integers[1] = d->ht[0].size;
+    integers[2] = d->ht[0].used;
+    integers[3] = (long) d->ht[1].table;
+    integers[4] = d->ht[1].size;
+    integers[5] = d->ht[1].used;
+
+    /* We hash N integers by summing every successive integer with the integer
+     * hashing of the previous sum. Basically:
+     *
+     * Result = hash(hash(hash(int1)+int2)+int3) ...
+     *
+     * This way the same set of integers in a different order will (likely) hash
+     * to a different number. */
+    for (j = 0; j < 6; j++) {
+        hash += integers[j];
+        /* For the hashing step we use Tomas Wang's 64 bit integer hash. */
+        hash = (~hash) + (hash << 21); // hash = (hash << 21) - hash - 1;
+        hash = hash ^ (hash >> 24);
+        hash = (hash + (hash << 3)) + (hash << 8); // hash * 265
+        hash = hash ^ (hash >> 14);
+        hash = (hash + (hash << 2)) + (hash << 4); // hash * 21
+        hash = hash ^ (hash >> 28);
+        hash = hash + (hash << 31);
+    }
+    return hash;
+}
+```
+
+##### dictScan迭代
+safe迭代器和unsafe迭代器的前提都是不能rehash，要通过这两种迭代的方式遍历所有节点会停止该dict的被动rehash，阻止了rehash的正常进行。`dictScan()`可以在不停止rehash的前提下遍历到所有dictEntry节点，尽管会有非常小的可能性出现重复的键值对。
+
+```c
+/* dictScan() is used to iterate over the elements of a dictionary.
+ *
+ * Iterating works the following way:
+ *
+ * 1) Initially you call the function using a cursor (v) value of 0.
+ * 2) The function performs one step of the iteration, and returns the
+ *    new cursor value you must use in the next call.
+ * 3) When the returned cursor is 0, the iteration is complete.
+ *
+ * The function guarantees all elements present in the
+ * dictionary get returned between the start and end of the iteration.
+ * However it is possible some elements get returned multiple times.
+ *
+ * For every element returned, the callback argument 'fn' is
+ * called with 'privdata' as first argument and the dictionary entry
+ * 'de' as second argument.
+ *
+ * HOW IT WORKS.
+ *
+ * The iteration algorithm was designed by Pieter Noordhuis.
+ * The main idea is to increment a cursor starting from the higher order
+ * bits. That is, instead of incrementing the cursor normally, the bits
+ * of the cursor are reversed, then the cursor is incremented, and finally
+ * the bits are reversed again.
+ *
+ * This strategy is needed because the hash table may be resized between
+ * iteration calls.
+ *
+ * dict.c hash tables are always power of two in size, and they
+ * use chaining, so the position of an element in a given table is given
+ * by computing the bitwise AND between Hash(key) and SIZE-1
+ * (where SIZE-1 is always the mask that is equivalent to taking the rest
+ *  of the division between the Hash of the key and SIZE).
+ *
+ * For example if the current hash table size is 16, the mask is
+ * (in binary) 1111. The position of a key in the hash table will always be
+ * the last four bits of the hash output, and so forth.
+ *
+ * WHAT HAPPENS IF THE TABLE CHANGES IN SIZE?
+ *
+ * If the hash table grows, elements can go anywhere in one multiple of
+ * the old bucket: for example let's say we already iterated with
+ * a 4 bit cursor 1100 (the mask is 1111 because hash table size = 16).
+ *
+ * If the hash table will be resized to 64 elements, then the new mask will
+ * be 111111. The new buckets you obtain by substituting in ??1100
+ * with either 0 or 1 can be targeted only by keys we already visited
+ * when scanning the bucket 1100 in the smaller hash table.
+ *
+ * By iterating the higher bits first, because of the inverted counter, the
+ * cursor does not need to restart if the table size gets bigger. It will
+ * continue iterating using cursors without '1100' at the end, and also
+ * without any other combination of the final 4 bits already explored.
+ *
+ * Similarly when the table size shrinks over time, for example going from
+ * 16 to 8, if a combination of the lower three bits (the mask for size 8
+ * is 111) were already completely explored, it would not be visited again
+ * because we are sure we tried, for example, both 0111 and 1111 (all the
+ * variations of the higher bit) so we don't need to test it again.
+ *
+ * WAIT... YOU HAVE *TWO* TABLES DURING REHASHING!
+ *
+ * Yes, this is true, but we always iterate the smaller table first, then
+ * we test all the expansions of the current cursor into the larger
+ * table. For example if the current cursor is 101 and we also have a
+ * larger table of size 16, we also test (0)101 and (1)101 inside the larger
+ * table. This reduces the problem back to having only one table, where
+ * the larger one, if it exists, is just an expansion of the smaller one.
+ *
+ * LIMITATIONS
+ *
+ * This iterator is completely stateless, and this is a huge advantage,
+ * including no additional memory used.
+ *
+ * The disadvantages resulting from this design are:
+ *
+ * 1) It is possible we return elements more than once. However this is usually
+ *    easy to deal with in the application level.
+ * 2) The iterator must return multiple elements per call, as it needs to always
+ *    return all the keys chained in a given bucket, and all the expansions, so
+ *    we are sure we don't miss keys moving during rehashing.
+ * 3) The reverse cursor is somewhat hard to understand at first, but this
+ *    comment is supposed to help.
+ */
+unsigned long dictScan(dict *d,
+                       unsigned long v,
+                       dictScanFunction *fn,
+                       dictScanBucketFunction* bucketfn,
+                       void *privdata)
+{
+    dictht *t0, *t1;
+    const dictEntry *de, *next;
+    unsigned long m0, m1;
+
+    if (dictSize(d) == 0) return 0;
+
+    if (!dictIsRehashing(d)) {
+        t0 = &(d->ht[0]);
+        m0 = t0->sizemask;
+
+        /* Emit entries at cursor */
+        if (bucketfn) bucketfn(privdata, &t0->table[v & m0]);
+        de = t0->table[v & m0];
+        while (de) {
+            next = de->next;
+            fn(privdata, de);
+            de = next;
+        }
+
+        /* Set unmasked bits so incrementing the reversed cursor
+         * operates on the masked bits */
+        v |= ~m0;
+
+        /* Increment the reverse cursor */
+        v = rev(v);
+        v++;
+        v = rev(v);
+
+    } else {
+        t0 = &d->ht[0];
+        t1 = &d->ht[1];
+
+        /* Make sure t0 is the smaller and t1 is the bigger table */
+        if (t0->size > t1->size) {
+            t0 = &d->ht[1];
+            t1 = &d->ht[0];
+        }
+
+        m0 = t0->sizemask;
+        m1 = t1->sizemask;
+
+        /* Emit entries at cursor */
+        if (bucketfn) bucketfn(privdata, &t0->table[v & m0]);
+        de = t0->table[v & m0];
+        while (de) {
+            next = de->next;
+            fn(privdata, de);
+            de = next;
+        }
+
+        /* Iterate over indices in larger table that are the expansion
+         * of the index pointed to by the cursor in the smaller table */
+        do {
+            /* Emit entries at cursor */
+            if (bucketfn) bucketfn(privdata, &t1->table[v & m1]);
+            de = t1->table[v & m1];
+            while (de) {
+                next = de->next;
+                fn(privdata, de);
+                de = next;
+            }
+
+            /* Increment the reverse cursor not covered by the smaller mask.*/
+            v |= ~m1;
+            v = rev(v);
+            v++;
+            v = rev(v);
+
+            /* Continue while bits covered by mask difference is non-zero */
+        } while (v & (m0 ^ m1));
+    }
+
+    return v;
+}
+```
+
+
+### 编译测试
 Redis字典依赖于SDS，可以通过下面的方法编译测试。
 
 ```shell
