@@ -336,18 +336,79 @@ typedef struct dict {           /* 字典的结构 */
 } dict;
 ```
 
-`ht`成员是一个两个元素的数组，数组中的每个项都是一个`dictht`哈希表，一般情况下，字典只使用 `ht[0]` 哈希表， `ht[1]` 哈希表只会在对 `ht[0] `哈希表进行 `rehash` 时使用。`rehashidx` 记录着当前字典`rehash`索引进度，值为-1时表示没有在进行`rehash`。Redis的哈希表结构体`dicht`，其结构如下：
+`ht`成员是一个两个元素的数组，数组中的每个项都是一个`dictht`哈希表，一般情况下，字典只使用 `ht[0]` 哈希表， `ht[1]` 哈希表只会在对 `ht[0] `哈希表进行 `rehash` 时使用。`rehashidx` 记录着当前字典`rehash`索引进度，值为-1时表示没有在进行`rehash`。判断字典是否在`rehash`的宏定义如下：
+```c
+#define dictIsRehashing(d) ((d)->rehashidx != -1)
+```
+Redis的哈希表结构体`dicht`，其结构如下：
 
 ```c
 typedef struct dictht {         /* 哈希表的结构 */
-    dictEntry **table;          /* 哈希表数组，每个元素都是指向dictEntry的指针 */
+    dictEntry **table;          /* 哈希表键值对指针数组 */
     unsigned long size;         /* 哈希表的大小 */
     unsigned long sizemask;     /* 哈希表大小掩码，用于计算索引值，总是等于size-1*/
     unsigned long used;         /* 该哈希表已有的节点（键值对）数目 */
 } dictht;
 ```
-起始元素个数为 DICT_HT_INITIAL_SIZE
+起始元素个数为 DICT_HT_INITIAL_SIZE(4)，`table`元素是`dictEntry`键值对指针数组，每个元素都是指向`dictEntry`的指针。`sizemask` 用于计算索引值，总是等于size-1，方便通过hash值与sizemask得到索引。
+```c
+h = dictHashKey(d, de->key) & d->ht[1].sizemask;
+```
+键值对结构体如下：
 
+```c
+typedef struct dictEntry {          /* 保存hash表中的键值对 */
+    void *key;                      /* 键 */
+    union {                         /* 值 */
+        void *val;
+        uint64_t u64;
+        int64_t s64;
+        double d;
+    } v;
+    struct dictEntry *next;         /* 指向哈希表中哈希值相同的下一个节点，用于解决键冲突问题 */
+} dictEntry;
+```
+看到`next`成员可以证实上图中Redis使用链地址法解决键冲突的问题。
+
+### 哈希方法
+Redis默认使用SipHash作为哈希方法，并封装了两个函数：
+```c
+uint64_t dictGenHashFunction(const void *key, int len);
+uint64_t dictGenCaseHashFunction(const unsigned char *buf, int len);
+```
+
+### Rehash
+当调用`dictReplace()`, `dictAdd()`, `dictAddOrFind()`为字典添加一个新的`dictEntry`时，Redis会调用`dictAddRaw()`这个底层方法。
+
+`dictAddRaw()`方法会调用`_dictKeyIndex()`找到新的键值对的存放索引，查找索引位置前会先调用`_dictExpandIfNeeded()`判断是否需要对哈希表扩容。
+
+```c
+/* Expand the hash table if needed */
+static int _dictExpandIfNeeded(dict *d)
+{
+    /* 正在hash中，返回 0 */
+    if (dictIsRehashing(d)) return DICT_OK;
+
+    /* 如果哈希表是空的，将其扩充到起始大小 */
+    if (d->ht[0].size == 0) return dictExpand(d, DICT_HT_INITIAL_SIZE);
+
+    /* If we reached the 1:1 ratio, and we are allowed to resize the hash
+     * table (global setting) or we should avoid it but the ratio between
+     * elements/buckets is over the "safe" threshold, we resize doubling
+     * the number of buckets.
+     *
+     * 如果比例达到了1:1，并且我们允许调整哈希表的大小或者 键值对的数目/哈希表的大小 超过了
+     * 安全阈值，我们将哈希表的大小调整到键值对数目的两倍
+     * */
+    if (d->ht[0].used >= d->ht[0].size &&
+        (dict_can_resize ||
+         d->ht[0].used/d->ht[0].size > dict_force_resize_ratio))
+    {
+        return dictExpand(d, d->ht[0].used*2);
+    }
+    return DICT_OK;
+}
+```
 
 
 ### 编译
