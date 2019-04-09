@@ -319,10 +319,10 @@ Redis链表的实现和常规的类似，不同的是，`list`结构体中有定
 同样，Redis的链表作为Redis的基本数据结构也可以单独作为模块使用。
 
 ## 字典
-Redis的字典使用的哈希表作为底层实现的，一个哈希表里面可以由多个哈希表节点，每个节点保存了字典中的一个键值对。
+Redis的字典使用的哈希表作为底层实现的，一个哈希表里面可以有多个哈希表节点，每个节点保存了字典中的一个键值对。
 > 相关源文件： [dict.h](https://github.com/antirez/redis/blob/5.0/src/dict.h), [dict.c](https://github.com/antirez/redis/blob/5.0/src/dict.c), [zmalloc.h](https://github.com/antirez/redis/blob/5.0/src/zmalloc.h) , [fmacros.h](https://github.com/antirez/redis/blob/5.0/src/fmacros.h), [sds.c](https://github.com/antirez/redis/blob/5.0/src/sds.h), [siphash.c](https://github.com/antirez/redis/blob/5.0/src/siphash.h)
 
-如下图所示展示了一个普通状态下Redis的字典结构：
+如下图展示了一个普通状态下Redis的字典结构：
 
 ![普通状态下Redis的字典](./images/redis_dict.png)
 
@@ -336,7 +336,7 @@ typedef struct dict {           /* 字典的结构 */
 } dict;
 ```
 
-`ht`成员是一个两个元素的数组，数组中的每个项都是一个`dictht`哈希表，一般情况下，字典只使用 `ht[0]` 哈希表， `ht[1]` 哈希表只会在对 `ht[0] `哈希表进行 `rehash` 时使用。`rehashidx` 记录着当前字典`rehash`索引进度，值为-1时表示没有在进行`rehash`。判断字典是否在`rehash`的宏定义如下：
+`ht`成员是一个两个元素的数组，数组中的每个项都是一个`dictht`哈希表，一般情况下，字典使用的是 `ht[0]` 哈希表， `ht[1]` 哈希表只会在对 `ht[0] `哈希表进行 `rehash` 时使用。`rehashidx` 记录着当前字典`rehash`索引进度，值为-1时表示没有在进行`rehash`。判断字典是否在`rehash`的宏定义如下：
 ```c
 #define dictIsRehashing(d) ((d)->rehashidx != -1)
 ```
@@ -350,7 +350,7 @@ typedef struct dictht {         /* 哈希表的结构 */
     unsigned long used;         /* 该哈希表已有的节点（键值对）数目 */
 } dictht;
 ```
-起始元素个数为 DICT_HT_INITIAL_SIZE(4)，`table`元素是`dictEntry`键值对指针数组，每个元素都是指向`dictEntry`的指针。`sizemask` 用于计算索引值，总是等于size-1，方便通过hash值与sizemask得到索引。
+起始哈希表大小为`DICT_HT_INITIAL_SIZE`（4），`table`成员是`dictEntry`键值对指针的数组，每个元素都是指向`dictEntry`的指针。`sizemask` 用于计算索引值，总是等于size-1，方便通过hash值与sizemask得到索引。
 ```c
 h = dictHashKey(d, de->key) & d->ht[1].sizemask;
 ```
@@ -370,17 +370,19 @@ typedef struct dictEntry {          /* 保存hash表中的键值对 */
 ```
 看到`next`成员可以证实上图中Redis使用链地址法解决键冲突的问题。
 
-### 哈希方法
+### Rehash
+#### 1. 哈希方法
 Redis默认使用SipHash作为哈希方法，并封装了两个函数：
 ```c
 uint64_t dictGenHashFunction(const void *key, int len);
 uint64_t dictGenCaseHashFunction(const unsigned char *buf, int len);
 ```
+#### 2. 扩容和rehash初始化
+当调用`dictReplace()`, `dictAdd()`, `dictAddOrFind()`为字典添加/更新一个新的`dictEntry`时，Redis会调用`dictAddRaw()`。
 
-### Rehash
-当调用`dictReplace()`, `dictAdd()`, `dictAddOrFind()`为字典添加一个新的`dictEntry`时，Redis会调用`dictAddRaw()`这个底层方法。
+`dictAddRaw()`方法会调用`_dictKeyIndex()`找到键值对的存放索引，查找索引位置前会先调用`_dictExpandIfNeeded()`判断是否需要对哈希表扩容。
 
-`dictAddRaw()`方法会调用`_dictKeyIndex()`找到新的键值对的存放索引，查找索引位置前会先调用`_dictExpandIfNeeded()`判断是否需要对哈希表扩容。
+如果字典正在进行rehash，那么就不需要再扩容；如果哈希表是空的，将其扩充到起始大小`DICT_HT_INITIAL_SIZE`（值为4）；如果`键值对的数目/哈希表的大小`大于 `dict_force_resize_ratio`（值为5）时或者键值对的数目大于哈希表的大小并且`dict_can_resize`值为1时就对哈希表扩容。满足这些要求后调用`dictExpand()`为rehash做初始化工作。
 
 ```c
 /* Expand the hash table if needed */
@@ -409,6 +411,148 @@ static int _dictExpandIfNeeded(dict *d)
     return DICT_OK;
 }
 ```
+
+`dictExpand()`函数做了以下工作：
+1. 计算扩容大小`realsize`（大于扩容size的最小2<sup>n</sup>）;
+2. 初始化`dict`第二个哈希表`ht[1]`，大小为扩容大小`realsize`，`sizemark`为`realsize-1`，`used` 为 0；
+3. 将`dict`的`rehashidx`设置为`0`。
+
+```c
+/* Expand or create the hash table
+ * 对已有hash表扩容或者创建一个新的hash表ht[1] */
+int dictExpand(dict *d, unsigned long size)
+{
+    /* the size is invalid if it is smaller than the number of
+     * elements already inside the hash table 
+     * 如果正在reharsh，或者size小于元素（键值对）的个数，那么是无效的
+     */
+    if (dictIsRehashing(d) || d->ht[0].used > size)
+        return DICT_ERR; /* 返回的是1 */
+
+    dictht n; /* the new hash table */
+    unsigned long realsize = _dictNextPower(size);
+
+    /* Rehashing to the same table size is not useful. */
+    if (realsize == d->ht[0].size) return DICT_ERR;
+
+    /* Allocate the new hash table and initialize all pointers to NULL */
+    n.size = realsize;
+    n.sizemask = realsize-1;
+    n.table = zcalloc(realsize*sizeof(dictEntry*));
+    n.used = 0;
+
+    /* Is this the first initialization? If so it's not really a rehashing
+     * we just set the first hash table so that it can accept keys. */
+    if (d->ht[0].table == NULL) {
+        d->ht[0] = n;
+        return DICT_OK;
+    }
+
+    /* Prepare a second hash table for incremental rehashing */
+    d->ht[1] = n;
+    d->rehashidx = 0;
+    return DICT_OK;
+}
+```
+
+#### 3. rehash 方式
+当字典完成初始化工作后才有可能开始rehash，rehash的条件是`rehashidx`是否为-1。为了防止rehash过程持续太久而导致进程处于block的状态，redis采用的是渐进式的rehash策略。
+
+redis的rehash有两种策略：
+
+- 定时执行：调用`dictRehashMilliseconds()`执行一毫秒的rehash。在redis的`serverCron`里调用，每次执行1ms的`dictRehash()`
+- 被动执行：字典调用`dictAddRaw()`,`dictGenericDelete()`，`dicFind()`, `dictGetSomeKeys()`，`dictGetRandomKey()`等函数时，会调用`_dictRehashStep`，迁移buckets中的一个非空bucket（或者跳过100个空的bucket）。
+
+```c
+/* Rehash for an amount of time between ms milliseconds and ms+1 milliseconds */
+int dictRehashMilliseconds(dict *d, int ms) {
+    long long start = timeInMilliseconds();
+    int rehashes = 0;
+
+    while(dictRehash(d,100)) {
+        rehashes += 100;
+        if (timeInMilliseconds()-start > ms) break;
+    }
+    return rehashes;
+}
+
+/* This function performs just a step of rehashing, and only if there are
+ * no safe iterators bound to our hash table. When we have iterators in the
+ * middle of a rehashing we can't mess with the two hash tables otherwise
+ * some element can be missed or duplicated.
+ *
+ * This function is called by common lookup or update operations in the
+ * dictionary so that the hash table automatically migrates from H1 to H2
+ * while it is actively used. */
+static void _dictRehashStep(dict *d) {
+    if (d->iterators == 0) dictRehash(d,1);
+}
+```
+
+#### 4.rehash 原理
+上面两种rehash方式都会调用`dictRehash()`执行rehash，先上代码！
+```c
+/* Performs N steps of incremental rehashing. Returns 1 if there are still
+ * keys to move from the old to the new hash table, otherwise 0 is returned.
+ *
+ * Note that a rehashing step consists in moving a bucket (that may have more
+ * than one key as we use chaining) from the old to the new hash table, however
+ * since part of the hash table may be composed of empty spaces, it is not
+ * guaranteed that this function will rehash even a single bucket, since it
+ * will visit at max N*10 empty buckets in total, otherwise the amount of
+ * work it does would be unbound and the function may block for a long time.
+ * */
+int dictRehash(dict *d, int n) {
+    /* 哈希表中会存在大量的空的 buckets，设置最大的数目。否则不可预期结束时间 */
+    int empty_visits = n*10; /* Max number of empty buckets to visit. */
+    if (!dictIsRehashing(d)) return 0;
+
+    while(n-- && d->ht[0].used != 0) {
+        dictEntry *de, *nextde;
+
+        /* Note that rehashidx can't overflow as we are sure there are more
+         * elements because ht[0].used != 0 */
+        assert(d->ht[0].size > (unsigned long)d->rehashidx);
+        while(d->ht[0].table[d->rehashidx] == NULL) { /* 跳过空buckets：如果该table数组该索引是空值，rehashidx加1 */
+            d->rehashidx++;
+            if (--empty_visits == 0) return 1;
+        }
+        
+        de = d->ht[0].table[d->rehashidx];
+        /* Move all the keys in this bucket from the old to the new hash HT */
+        while(de) {
+            uint64_t h;
+
+            nextde = de->next; /* 之前在同一hash index下的其他键值对重新计算index */
+            /* Get the index in the new hash table */
+            h = dictHashKey(d, de->key) & d->ht[1].sizemask;
+            de->next = d->ht[1].table[h];
+            d->ht[1].table[h] = de;
+            d->ht[0].used--;
+            d->ht[1].used++;
+            de = nextde;
+        }
+        d->ht[0].table[d->rehashidx] = NULL; /* ht[1]的table中该位置清空值 */
+        d->rehashidx++;
+    }
+
+    /* Check if we already rehashed the whole table...
+     * 判断是否整个表以前rehash完成，完成后rehashidx设为-1，原始的ht[0]被ht[1]替代，重新初始化ht[1] */
+    if (d->ht[0].used == 0) {
+        zfree(d->ht[0].table);
+        d->ht[0] = d->ht[1];
+        _dictReset(&d->ht[1]);
+        d->rehashidx = -1;
+        return 0;
+    }
+
+    /* More to rehash... */
+    return 1;
+}
+```
+rehash过程包括将一个bucket（有可能包含多个key，这些key以链表的形式存储）从旧的哈希表（ht[0]）移动到新的哈希表(ht[1])中。哈希表中会存在大量的空的 buckets，我们需要设置跳过空的bucket的最大的数目，否则不可预期结束时间（参数`n`表示rehash的非空bucket)。重新hash后，之后hash的键值对会插入到键值对链表的表头。
+
+当 `d->ht[0].used == 0` 时rehash结束，`rehashidx`重新设置为 -1。
 
 
 ### 编译
