@@ -1052,12 +1052,65 @@ gcc -DDICT_BENCHMARK_MAIN -o dict dict.c sds.c zmalloc.c siphash.c
 
 ## 跳跃表
 跳跃表（skiplist）是一种有序链表扩展， 通过在每个节点中维持多个指向其他节点的指针， 来达到快速访问节点的目的。跳跃表的原理可以看这篇[文章](https://www.cnblogs.com/thrillerz/p/4505550.html)。跳跃表支持平均 O(\log N) 最坏 O(N) 复杂度的节点查找， 还可以通过顺序性操作来批量处理节点。
+> 相关源文件：[server.h](https://github.com/antirez/redis/blob/5.0/src/dict.h), [t_zset.c](https://github.com/antirez/redis/blob/5.0/src/t_zset.c)
+
+Redis的跳跃表的结构定义如下：
+```c
+/* ZSETs use a specialized version of Skiplists */
+typedef struct zskiplistNode {
+    sds ele;
+    double score;                           /* 分值，跳跃表中的节点按各自的分值从小到大排列 */
+    struct zskiplistNode *backward;         /* 后退指针 */
+    struct zskiplistLevel {
+        struct zskiplistNode *forward;      /* 前进指针 */
+        unsigned int span;                  /* 跨度，前进指针所指向节点和当前节点的距离 */
+    } level[];                              /* 层 */
+} zskiplistNode;
+
+typedef struct zskiplist {
+    struct zskiplistNode *header, *tail; /* 跳跃表的头尾指针 */
+    unsigned long length;                /* 跳跃表的长度 */
+    int level;                           /* 目前跳跃表内，层数最大的那个节点的层数（表头节点不计算在内）*/
+} zskiplist;
+
+typedef struct zset {
+    dict *dict;
+    zskiplist *zsl;
+} zset;
+```
+Redis的`zset`结构体中包含了`dict`和`zskiplist`两个成员，字典可以快速的定位一个member是否存在`zset`中，跳跃表可以快速查得member的排行和分数。结合两者的优势使得性能更优。
+
+
+示意图如下：
+
+![跳跃表](./images/redis_skiplist.png)
+
+最右边是`zskiplist`结构：
+- header ：指向跳跃表的表头节点，表头节点比较特殊，它定义了跳跃表的最大层数，level和legnth的计算都不包含它
+- tail ：指向跳跃表的表尾节点
+- level ：记录目前跳跃表内，层数最大的那个节点的层数
+- length ：记录跳跃表的长度，也即是，跳跃表目前包含节点的数量
+
+`zskiplist`右边是4个`zskiplistNode`结构体，每个结构体都包含四个成员：
+- 层（level）：每个层都带有两个属性：前进指针和跨度。前进指针用于访问位于表尾方向的其他节点，而跨度则记录了前进指针所指向节点和当前节点的距离。
+- 后退（backward）指针：后退指针在程序从表尾向表头遍历时使用。
+- 分值（score）：在跳跃表中，节点按各自所保存的分值从小到大排列。
+- 成员对象（obj）：各个节点中的 o1 、 o2 和 o3 是节点所保存的成员对象。
 
 
 
 
 
-> 相关源文件：[server.h](https://github.com/antirez/redis/blob/5.0/src/server.h), 
+
+
+
+
+
+
+
+
+
+
 
 
 
