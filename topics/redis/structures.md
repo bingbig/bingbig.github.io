@@ -1050,14 +1050,25 @@ Redis字典依赖于SDS，可以通过下面的方法编译测试。
 gcc -DDICT_BENCHMARK_MAIN -o dict dict.c sds.c zmalloc.c siphash.c 
 ```
 
+## 跳跃表
+跳跃表（skiplist）是一种有序链表扩展， 通过在每个节点中维持多个指向其他节点的指针， 来达到快速访问节点的目的。跳跃表的原理可以看这篇[文章](https://www.cnblogs.com/thrillerz/p/4505550.html)。跳跃表支持平均 O(\log N) 最坏 O(N) 复杂度的节点查找， 还可以通过顺序性操作来批量处理节点。
+
+
+
+
+
+> 相关源文件：[server.h](https://github.com/antirez/redis/blob/5.0/src/server.h), 
+
+
+
+
+
+
+
+
+
+
 
 ## 参考
 1. [Redis 设计与实现](http://redisbook.com/)
-
-
-
-
-
-
-
-
+2. [跳跃表原理](https://www.cnblogs.com/thrillerz/p/4505550.html)
