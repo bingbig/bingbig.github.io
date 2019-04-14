@@ -1097,9 +1097,137 @@ Redis的`zset`结构体中包含了`dict`和`zskiplist`两个成员，字典可�
 - 分值（score）：在跳跃表中，节点按各自所保存的分值从小到大排列。
 - 成员对象（obj）：各个节点中的 o1 、 o2 和 o3 是节点所保存的成员对象。
 
+## 整数集合
+整数集合是redis用来保存整数集合的结构体。
+```c
+typedef struct intset {
+    uint32_t encoding;  /* 编码方式 */
+    uint32_t length;    /* 集合包含的元素数目 */
+    int8_t contents[];  /* 保存元素的数组。虽然声明为int8_t类型的数组，但实际上并不保存该类型的值，数组类型取决于encoding属性的值 */
+} intset;
+```
+和之前的`SDSHDR`结构体一样，最后的成员`contents`的元素个数没有定义。`encoding`表示编码方式，`length`表示集合包含的元素数目，`contents`指向真正的数据所在的地址。
+
+![整数集合](./images/redis_inset.png)
+
+上图展示的是一个包含4个整数的集合，集合元素类型是`int16_t`，`contents`数组的大小等于`sizeof(int16_t) * 5 = 16 * 5 = 80`位。
 
 
+### 整数集合升级
+`intsetResize()`函数用来对现有的整数集合升级。
 
+```c
+/* Resize the intset */
+static intset *intsetResize(intset *is, uint32_t len) {
+    uint32_t size = len*intrev32ifbe(is->encoding);
+    is = zrealloc(is,sizeof(intset)+size); /*  realloc函数用于修改一个原先已经分配的内存块的大小，可以使一块内存的扩大或缩小。 */
+    return is;
+}
+```
+升级集合到新的大小时，先计算升级后的`content`后面的存储空间（编码*元素个数），加上`intset`结构体的大小作为升级后的整数集合大小。当插入一个大值时，需要将整数集合升级到更大的编码，`intsetUpgradeAndAdd()`实现了整数集合的插入升级。 
+
+```c{10,15,16}
+/* Upgrades the intset to a larger encoding and inserts the given integer. */
+static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
+    uint8_t curenc = intrev32ifbe(is->encoding);
+    uint8_t newenc = _intsetValueEncoding(value);
+    int length = intrev32ifbe(is->length);
+    int prepend = value < 0 ? 1 : 0;
+
+    /* First set new encoding and resize */
+    is->encoding = intrev32ifbe(newenc);
+    is = intsetResize(is,intrev32ifbe(is->length)+1);
+
+    /* Upgrade back-to-front so we don't overwrite values.
+     * Note that the "prepend" variable is used to make sure we have an empty
+     * space at either the beginning or the end of the intset. */
+    while(length--) /* 从后往前写，这样就不会覆盖数据 */
+        _intsetSet(is,length+prepend,_intsetGetEncoded(is,length,curenc));
+
+    /* Set the value at the beginning or the end. */
+    if (prepend)
+        _intsetSet(is,0,value);
+    else
+        _intsetSet(is,intrev32ifbe(is->length),value);
+    is->length = intrev32ifbe(intrev32ifbe(is->length)+1);
+    return is;
+}
+```
+
+`_intsetValueEncoding()`通过将`value`和`INT32_MIN`,`INT32_MAX`等比较计算出升级后的编码类型，之后调整集合的大小。调整之后需要对当前存储的数值进行类型转换并重写到相应的内存中，`_intsetSet()`方法就是用来根据整数集合的编码类型来写值。redis在对整数集合升级时，采取的是从后忘前写的策略，这样先重写的数据不会覆盖还未重写的数据。
+
+从整数集合中删除一个元素比较简单，先判断要删除的元素是不是小于集合类型的最大值，如果是则在整数集合中找到该元素的位置。假设找到要删除的元素的位置是`pos`，redis要做的是将`pos+1`及其后面的元素往前移，这样就是覆盖了`pos`的值，最后对整数集合的大小进行调整`intsetResize()`。
+
+```c{7,14,15}
+/* Delete integer from intset */
+intset *intsetRemove(intset *is, int64_t value, int *success) {
+    uint8_t valenc = _intsetValueEncoding(value);
+    uint32_t pos;
+    if (success) *success = 0;
+
+    if (valenc <= intrev32ifbe(is->encoding) && intsetSearch(is,value,&pos)) {
+        uint32_t len = intrev32ifbe(is->length);
+
+        /* We know we can delete */
+        if (success) *success = 1;
+
+        /* Overwrite value with tail and update length */
+        if (pos < (len-1)) intsetMoveTail(is,pos+1,pos);
+        is = intsetResize(is,len-1);
+        is->length = intrev32ifbe(len-1);
+    }
+    return is;
+}
+```
+
+整数集合的值是按照从小到大的顺序排列的，因此可以通过二分法来快速查询值的位置。
+```c
+
+/* Search for the position of "value". Return 1 when the value was found and
+ * sets "pos" to the position of the value within the intset. Return 0 when
+ * the value is not present in the intset and sets "pos" to the position
+ * where "value" can be inserted. */
+static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
+    int min = 0, max = intrev32ifbe(is->length)-1, mid = -1;
+    int64_t cur = -1;
+
+    /* The value can never be found when the set is empty */
+    if (intrev32ifbe(is->length) == 0) {
+        if (pos) *pos = 0;
+        return 0;
+    } else {
+        /* Check for the case where we know we cannot find the value,
+         * but do know the insert position. */
+        if (value > _intsetGet(is,max)) {
+            if (pos) *pos = intrev32ifbe(is->length);
+            return 0;
+        } else if (value < _intsetGet(is,0)) {
+            if (pos) *pos = 0;
+            return 0;
+        }
+    }
+
+    while(max >= min) {
+        mid = ((unsigned int)min + (unsigned int)max) >> 1;
+        cur = _intsetGet(is,mid);
+        if (value > cur) {
+            min = mid+1;
+        } else if (value < cur) {
+            max = mid-1;
+        } else {
+            break;
+        }
+    }
+
+    if (value == cur) {
+        if (pos) *pos = mid;
+        return 1;
+    } else {
+        if (pos) *pos = min;
+        return 0;
+    }
+}
+```
 
 
 
