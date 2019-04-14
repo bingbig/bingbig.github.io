@@ -1,6 +1,8 @@
 # Redis源码阅读
 
 > Redis项目分支：[5.0](https://github.com/antirez/redis/tree/5.0)
+> 
+> 重度参考：黄健宏大牛的《[Redis 设计与实现](http://redisbook.com/)》
 
 ## 设计
 - [数据结构和对象](./structures.md)
