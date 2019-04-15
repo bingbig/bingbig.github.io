@@ -1230,6 +1230,8 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
 ```
 
 ## 压缩列表
+> 相关源文件：[ziplist.h](https://github.com/antirez/redis/blob/5.0/src/ziplist.h), [ziplist.c](https://github.com/antirez/redis/blob/5.0/src/ziplist.c), [zmalloc.c](https://github.com/antirez/redis/blob/5.0/src/zmalloc.c),[zmalloc.h](https://github.com/antirez/redis/blob/5.0/src/zmalloc.h)
+
 当一个列表键只包含少量列表项， 并且每个列表项小整数值，或者长度比较短的字符串时，redis会采用压缩列表来作为列表键的底层实现。当一个哈希键只包含少量键值对， 并且每个键值对的键和值是小整数值， 或者长度比较短的字符串时，redis会采用压缩列表来作为哈希键的底层实现。
 
 压缩列表时redis为了节省内存开发的一种顺序编码的列表。它可以同时整数或者字符串，因为每次操作都需要对内存进行重新分配，因此实际的复杂度和内存的使用量相关。
@@ -1244,7 +1246,27 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
 
 ## 对象
 Redis并没有直接使用上述的这几种数据结构来实现它的键值对数据库，而是基于这些数据结构创建了一个对象系统。这个系统包含`字符串对象`、`列表对象`、`哈希对象`、`集合对象`和`有序集合对象`这五种类型的对象，每种对象都用到了至少一种我们前面所介绍的数据结构。
+> 相关源文件: [server.h](https://github.com/antirez/redis/blob/5.0/src/server.h), [server.c](https://github.com/antirez/redis/blob/5.0/src/server.c)
 
+Redis对象的定义是在`server.h`中的，
+```c
+typedef struct redisObject {
+    unsigned type:4;        /* 对象的类型 */
+    unsigned encoding:4;    /* 对象的编码，ptr指向对象的底层实现结构，结构由这个属性决定。
+                            * 通过encoding属性来设定对象所使用的编码，而不是特定类型的对象关联一种固定的编码，
+                            * 可以极大的提升redis的灵活性和效率。
+                            * */
+    unsigned lru:LRU_BITS; /* LRU time (relative to global lru_clock) or
+                            * LFU data (least significant 8 bits frequency
+                            * and most significant 16 bits access time). */
+    int refcount;          /* 引用计数 */
+    void *ptr;
+} robj;
+```
+redis使用`refcount`来实现内存的回收机制，通过跟踪对象的引用计数信息， 在适当的时候自动释放对象并进行内存回收。`lru`属性记录了对象最后一次被命令程序访问的时间或者是8位的最近访问频率和16位的访问时间。如果服务器打开了 `maxmemory` 选项， 并且服务器用于回收内存的算法为 `volatile-lru` 或者 `allkeys-lru` ， 那么当服务器占用的内存数超过了 `maxmemory` 选项所设置的上限值时， 空转时长较高的那部分键会优先被服务器释放， 从而回收内存。
+
+- LRU: least recently used,最近最少使用
+- LFU: Least Frequently Used,算法根据数据的历史访问频率来淘汰数据，其核心思想是“如果数据过去被访问多次，那么将来被访问的频率也更高”。
 
 
 
