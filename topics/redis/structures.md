@@ -1246,7 +1246,7 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
 
 ## 对象
 Redis并没有直接使用上述的这几种数据结构来实现它的键值对数据库，而是基于这些数据结构创建了一个对象系统。这个系统包含`字符串对象`、`列表对象`、`哈希对象`、`集合对象`和`有序集合对象`这五种类型的对象，每种对象都用到了至少一种我们前面所介绍的数据结构。
-> 相关源文件: [server.h](https://github.com/antirez/redis/blob/5.0/src/server.h), [server.c](https://github.com/antirez/redis/blob/5.0/src/server.c)
+> 相关源文件: [server.h](https://github.com/antirez/redis/blob/5.0/src/server.h), [server.c](https://github.com/antirez/redis/blob/5.0/src/server.c), [object.c](https://github.com/antirez/redis/blob/5.0/src/object.c)
 
 Redis对象的定义是在`server.h`中的，
 ```c
@@ -1268,7 +1268,161 @@ redis使用`refcount`来实现内存的回收机制，通过跟踪对象的引�
 - LRU: least recently used,最近最少使用
 - LFU: Least Frequently Used,算法根据数据的历史访问频率来淘汰数据，其核心思想是“如果数据过去被访问多次，那么将来被访问的频率也更高”。
 
+Redis实现了以下对象操作函数：
+```c
+void decrRefCount(robj *o);
+void decrRefCountVoid(void *o);
+void incrRefCount(robj *o);
+robj *makeObjectShared(robj *o);
+robj *resetRefCount(robj *obj);
+void freeStringObject(robj *o);
+void freeListObject(robj *o);
+void freeSetObject(robj *o);
+void freeZsetObject(robj *o);
+void freeHashObject(robj *o);
+robj *createObject(int type, void *ptr);
+robj *createStringObject(const char *ptr, size_t len);
+robj *createRawStringObject(const char *ptr, size_t len);
+robj *createEmbeddedStringObject(const char *ptr, size_t len);
+robj *dupStringObject(const robj *o);
+int isSdsRepresentableAsLongLong(sds s, long long *llval);
+int isObjectRepresentableAsLongLong(robj *o, long long *llongval);
+robj *tryObjectEncoding(robj *o);
+robj *getDecodedObject(robj *o);
+size_t stringObjectLen(robj *o);
+robj *createStringObjectFromLongLong(long long value);
+robj *createStringObjectFromLongLongForValue(long long value);
+robj *createStringObjectFromLongDouble(long double value, int humanfriendly);
+robj *createQuicklistObject(void);
+robj *createZiplistObject(void);
+robj *createSetObject(void);
+robj *createIntsetObject(void);
+robj *createHashObject(void);
+robj *createZsetObject(void);
+robj *createZsetZiplistObject(void);
+robj *createStreamObject(void);
+robj *createModuleObject(moduleType *mt, void *value);
+int getLongFromObjectOrReply(client *c, robj *o, long *target, const char *msg);
+int checkType(client *c, robj *o, int type);
+int getLongLongFromObjectOrReply(client *c, robj *o, long long *target, const char *msg);
+int getDoubleFromObjectOrReply(client *c, robj *o, double *target, const char *msg);
+int getDoubleFromObject(const robj *o, double *target);
+int getLongLongFromObject(robj *o, long long *target);
+int getLongDoubleFromObject(robj *o, long double *target);
+int getLongDoubleFromObjectOrReply(client *c, robj *o, long double *target, const char *msg);
+char *strEncoding(int encoding);
+int compareStringObjects(robj *a, robj *b);
+int collateStringObjects(robj *a, robj *b);
+int equalStringObjects(robj *a, robj *b);
+unsigned long long estimateObjectIdleTime(robj *o);
+#define sdsEncodedObject(objptr) (objptr->encoding == OBJ_ENCODING_RAW || objptr->encoding == OBJ_ENCODING_EMBSTR)
+```
 
+### 创建对象
+Redis封装了多种对象创建的方法，如`createObject()`。
+
+
+### 引用计数
+当对象的`refcount`等于1时，如果再次减少其引用次数，redis会回收该对象占用的内存。`freeStringObject()`，`freeListObject()`函数都是用来回收对象`o->ptr`指向的内存，最后通过`zfree(0)`释放对象结构体自身占用的内存。
+```c
+void decrRefCount(robj *o) {
+    if (o->refcount == 1) {
+        switch(o->type) {
+        case OBJ_STRING: freeStringObject(o); break;
+        case OBJ_LIST: freeListObject(o); break;
+        case OBJ_SET: freeSetObject(o); break;
+        case OBJ_ZSET: freeZsetObject(o); break;
+        case OBJ_HASH: freeHashObject(o); break;
+        case OBJ_MODULE: freeModuleObject(o); break;
+        case OBJ_STREAM: freeStreamObject(o); break;
+        default: serverPanic("Unknown object type"); break;
+        }
+        zfree(o);
+    } else {
+        if (o->refcount <= 0) serverPanic("decrRefCount against refcount <= 0");
+        if (o->refcount != OBJ_SHARED_REFCOUNT) o->refcount--;
+    }
+}
+```
+共享对象的引用计数次数为`OBJ_SHARED_REFCOUNT`，其`refcount`不会被减少，因此共享对象不会被回收。
+```c
+// 引用计数减 1
+void incrRefCount(robj *o) {
+    if (o->refcount != OBJ_SHARED_REFCOUNT) o->refcount++;
+}
+
+// 设置共享对象的引用计数
+robj *makeObjectShared(robj *o) {
+    serverAssert(o->refcount == 1);
+    o->refcount = OBJ_SHARED_REFCOUNT;
+    return o;
+}
+```
+
+### 内存回收
+上面提到了当对一个`refcount = 1`的对象进行`decrRefCount()`操作减少引用计数时，Redis会回收该对象占用的内存。根据对象的`type`属性，redis调用相应的内存回收函数(`freeStringObject()`， `freeListObject()`, `freeSetObject()`, `freeZsetObject()`, `freeHashObject()`)来回收Redis提供的五种对象所占用的内存。内存回收函数又通过对象的编码属性`o->encoding`来执行相应的内存回收方式。如字典，它的底层有可能时压缩列表编码的，也有可能是哈希表编码的，不同的编码方式，内存回收时的方法也不同。
+
+```c
+void freeStringObject(robj *o) {
+    if (o->encoding == OBJ_ENCODING_RAW) {
+        sdsfree(o->ptr);
+    }
+}
+
+void freeListObject(robj *o) {
+    if (o->encoding == OBJ_ENCODING_QUICKLIST) {
+        quicklistRelease(o->ptr);
+    } else {
+        serverPanic("Unknown list encoding type");
+    }
+}
+
+void freeSetObject(robj *o) {
+    switch (o->encoding) {
+    case OBJ_ENCODING_HT:
+        dictRelease((dict*) o->ptr);
+        break;
+    case OBJ_ENCODING_INTSET:
+        zfree(o->ptr);
+        break;
+    default:
+        serverPanic("Unknown set encoding type");
+    }
+}
+
+void freeZsetObject(robj *o) {
+    zset *zs;
+    switch (o->encoding) {
+    case OBJ_ENCODING_SKIPLIST:
+        zs = o->ptr;
+        dictRelease(zs->dict);
+        zslFree(zs->zsl);
+        zfree(zs);
+        break;
+    case OBJ_ENCODING_ZIPLIST:
+        zfree(o->ptr);
+        break;
+    default:
+        serverPanic("Unknown sorted set encoding");
+    }
+}
+
+void freeHashObject(robj *o) {
+    switch (o->encoding) {
+    case OBJ_ENCODING_HT:
+        dictRelease((dict*) o->ptr);
+        break;
+    case OBJ_ENCODING_ZIPLIST:
+        zfree(o->ptr);
+        break;
+    default:
+        serverPanic("Unknown hash encoding type");
+        break;
+    }
+}
+```
+
+最后通过`zfree()`回收对象结构体自身占用的内存。
 
 
 
