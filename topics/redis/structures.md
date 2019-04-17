@@ -1268,28 +1268,32 @@ redis使用`refcount`来实现内存的回收机制，通过跟踪对象的引�
 - LRU: least recently used,最近最少使用
 - LFU: Least Frequently Used,算法根据数据的历史访问频率来淘汰数据，其核心思想是“如果数据过去被访问多次，那么将来被访问的频率也更高”。
 
-Redis实现了以下对象操作函数：
+### 创建对象
+Redis封装了多种对象创建的方法，比较基本的创建方法如`createObject()`。
 ```c
-void decrRefCount(robj *o);
-void decrRefCountVoid(void *o);
-void incrRefCount(robj *o);
-robj *makeObjectShared(robj *o);
-robj *resetRefCount(robj *obj);
-void freeStringObject(robj *o);
-void freeListObject(robj *o);
-void freeSetObject(robj *o);
-void freeZsetObject(robj *o);
-void freeHashObject(robj *o);
+robj *createObject(int type, void *ptr) {
+    robj *o = zmalloc(sizeof(*o));
+    o->type = type;
+    o->encoding = OBJ_ENCODING_RAW;
+    o->ptr = ptr;
+    o->refcount = 1;
+
+    /* Set the LRU to the current lruclock (minutes resolution), or
+     * alternatively the LFU counter. */
+    if (server.maxmemory_policy & MAXMEMORY_FLAG_LFU) {
+        o->lru = (LFUGetTimeInMinutes()<<8) | LFU_INIT_VAL;
+    } else {
+        o->lru = LRU_CLOCK();
+    }
+    return o;
+}
+```
+`type`为redis的外部数据结构，即我们常用的redis五种数据类型，`encoding`为redis的内部数据结构实现，包括我们前面讲的数据类型。基于`robj *createObject(int type, void *ptr);`方法可以创建各种类型的redis对象。相关的对象创建接口有：
+```c
 robj *createObject(int type, void *ptr);
 robj *createStringObject(const char *ptr, size_t len);
 robj *createRawStringObject(const char *ptr, size_t len);
 robj *createEmbeddedStringObject(const char *ptr, size_t len);
-robj *dupStringObject(const robj *o);
-int isSdsRepresentableAsLongLong(sds s, long long *llval);
-int isObjectRepresentableAsLongLong(robj *o, long long *llongval);
-robj *tryObjectEncoding(robj *o);
-robj *getDecodedObject(robj *o);
-size_t stringObjectLen(robj *o);
 robj *createStringObjectFromLongLong(long long value);
 robj *createStringObjectFromLongLongForValue(long long value);
 robj *createStringObjectFromLongDouble(long double value, int humanfriendly);
@@ -1302,24 +1306,43 @@ robj *createZsetObject(void);
 robj *createZsetZiplistObject(void);
 robj *createStreamObject(void);
 robj *createModuleObject(moduleType *mt, void *value);
-int getLongFromObjectOrReply(client *c, robj *o, long *target, const char *msg);
-int checkType(client *c, robj *o, int type);
-int getLongLongFromObjectOrReply(client *c, robj *o, long long *target, const char *msg);
-int getDoubleFromObjectOrReply(client *c, robj *o, double *target, const char *msg);
-int getDoubleFromObject(const robj *o, double *target);
-int getLongLongFromObject(robj *o, long long *target);
-int getLongDoubleFromObject(robj *o, long double *target);
-int getLongDoubleFromObjectOrReply(client *c, robj *o, long double *target, const char *msg);
-char *strEncoding(int encoding);
-int compareStringObjects(robj *a, robj *b);
-int collateStringObjects(robj *a, robj *b);
-int equalStringObjects(robj *a, robj *b);
-unsigned long long estimateObjectIdleTime(robj *o);
-#define sdsEncodedObject(objptr) (objptr->encoding == OBJ_ENCODING_RAW || objptr->encoding == OBJ_ENCODING_EMBSTR)
 ```
+查看这些对象创建函数，在redis中，共定义了 5 + 2 种对象类型：
+```c
+/* A redis object, that is a type able to hold a string / list / set */
 
-### 创建对象
-Redis封装了多种对象创建的方法，如`createObject()`。
+/* The actual Redis Object */
+#define OBJ_STRING 0    /* String object. */
+#define OBJ_LIST 1      /* List object. */
+#define OBJ_SET 2       /* Set object. */
+#define OBJ_ZSET 3      /* Sorted set object. */
+#define OBJ_HASH 4      /* Hash object. */
+
+/* The "module" object type is a special one that signals that the object
+ * is one directly managed by a Redis module. In this case the value points
+ * to a moduleValue struct, which contains the object value (which is only
+ * handled by the module itself) and the RedisModuleType struct which lists
+ * function pointers in order to serialize, deserialize, AOF-rewrite and
+ * free the object.
+ *
+ * Inside the RDB file, module types are encoded as OBJ_MODULE followed
+ * by a 64 bit module type ID, which has a 54 bits module-specific signature
+ * in order to dispatch the loading to the right module, plus a 10 bits
+ * encoding version. */
+#define OBJ_MODULE 5    /* Module object. */
+#define OBJ_STREAM 6    /* Stream object. */
+```
+`OBJ_MODULE`是一种特殊的对象类型，由redis模块管理。`OBJ_STREAM`类型是redis 5.0的新特性Stream的数据实现，可以查看相关的文档介绍（[Introduction to Redis Streams](https://redis.io/topics/streams-intro)）。
+
+根据配置，redis可以选择多种内存策略，用户可以选择以下五种策略：
+- `noeviction`: 当内存使用超过配置的时候会返回错误，不会回收任何键。默认配置。
+- `volatile-lru`: 加入键的时候，如果过限，首先从设置了过期时间的键集合中回收最久没有使用的键
+- `allkeys-lru`: 新增键的时候，如果内存过限，首先通过LRU算法回收最久没有使用的键
+- `volatile-random`: 加入键的时候如果内存过限，从过期键的集合中随机回收键
+- `allkeys-random`: 加入键的时候如果内存过限，从所有键中随机删除
+- `volatile-ttl`: 从配置了过期时间的键中回收马上就要过期的键
+- `volatile-lfu`: 从所有配置了过期时间的键中回收使用频率最少的键
+- `allkeys-lfu`: 从所有键中回收使用频率最少的键
 
 
 ### 引用计数
@@ -1423,27 +1446,6 @@ void freeHashObject(robj *o) {
 ```
 
 最后通过`zfree()`回收对象结构体自身占用的内存。
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## 参考
 1. [Redis 设计与实现](http://redisbook.com/)
