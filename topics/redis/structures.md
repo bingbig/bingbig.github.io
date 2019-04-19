@@ -16,7 +16,7 @@ Redis没有直接使用C里面的字符串，而是构建了一种名为简单�
 #define s_realloc zrealloc
 #define s_free zfree
 ```
-简单动态字符串的具体是在`sds.c`和`sds.h`中实现的。在头文件中定义了两种主要的类型，`sds`和`sdshdr##T`。
+简单动态字符串具体是在`sds.c`和`sds.h`中实现的。在头文件中定义了两种主要的类型，`sds`和`sdshdr##T`。
 
 ```c
 typedef char *sds;
@@ -53,11 +53,11 @@ struct __attribute__ ((__packed__)) sdshdr64 {
     char buf[];
 };
 ```
-作者共定义了五种类型的`sdshdr`，主要是为了内存的优化，节省内存，毕竟sds是redis中最常用到的数据类型。`__attribute__ ((__packed__))` 也是为了告诉编译器取消字节对齐优化。其中`sdshdr5`没有使用过。
+作者共定义了五种类型的`sdshdr`，主要是为了内存的优化，节省内存，毕竟sds是redis中最常用到的数据类型。`__attribute__ ((__packed__))` 也是为了告诉编译器取消字节对齐优化。其中`sdshdr5`还没有使用过。
 
-整个SDS的内存是连续的的，统一开辟的，`sdshdr`结构体后面紧跟着字符串`sds`。结构体的最后一个成员`char buf[];`是一个元素个数为0的字符数组，并不占用内存空间，为了指示在结构体后面才是字符串的实体所在。所以在`sds.h`中呢就有这么些骚操作：
+整个SDS的内存是一块连续的，统一开辟的。`sdshdr`结构体后面紧跟着字符串`sds`。结构体的最后一个成员`char buf[];`是一个元素个数为0的字符数组，并不占用内存空间，为了指示在结构体后面才是字符串的实体所在。所以在`sds.h`中就有这么些骚操作：
 
-### 数据操作技巧
+### SDS数据操作
 1. sds和sdshdr
 ```c
 // 根据字符串sds拿到sdshdr结构体的指针。
@@ -90,18 +90,18 @@ static inline size_t sdslen(const sds s) {
     return 0;
 }
 ```
-看代码第6行，这就很厉害了，字符串前一个字节就是`flags`，-1 就拿到了类型的值，进而就知道这个s(sds)前面的sdshdr的地址。
+看代码第6行，这就很厉害了，字符串前一个字节就是`flags`，-1 就拿到了类型的值，进而就知道s(sds)前面的sdshdr的地址。
 
 ### 创建SDS
 
-先计算C字符串的长度
+先计算C字符串的长度：
 ```c
 sds sdsnew(const char *init) {
     size_t initlen = (init == NULL) ? 0 : strlen(init);
     return sdsnewlen(init, initlen);
 }
 ```
-根据长度和字符串创建SDS
+根据长度和字符串创建SDS：
 ```c
 sds sdsnewlen(const void *init, size_t initlen) {
     void *sh;
@@ -258,7 +258,7 @@ sds sdsMakeRoomFor(sds s, size_t addlen) {
 1. 当修改后SDS字符串长度小于 `SDS_MAX_PREALLOC`（1M）时，扩容长度为修改后字符串长度的两倍。
 2. 当修改后的SDS字符串长度大于`SDS_MAX_PREALLOC`时，扩容的长度为修改后字符串长度加上`SDS_MAX_PREALLOC`,即新的字符长度+1m大小。
 
-和`sdsMakeRoomFor()`函数相反，SDS时通过`sdsRemoveFreeSpace()`函数实现惰性空间释放。其原理于前者类似，sdshdr类型不变时，直接`realloc`，类型发生了变化时，创建一个新的sdshdr，将sds复制到新的sdshdr后面，回收旧的sdshdr。
+和`sdsMakeRoomFor()`函数相反，SDS时通过`sdsRemoveFreeSpace()`函数实现惰性空间释放。其原理于前者类似，sdshdr类型不变时，直接`realloc`，类型发生了变化时，创建一个新的sdshdr，将sds复制到新的sdshdr后面，回收旧的sdshdr占用的内存。
 
 ### SDS和C字符串的区别
 SDS相对于C字符串有以下优势：
@@ -456,7 +456,7 @@ int dictExpand(dict *d, unsigned long size)
 ```
 
 #### 3. rehash 方式
-当字典完成初始化工作后才有可能开始rehash，rehash的条件是`rehashidx`是否为-1。为了防止rehash过程持续太久而导致进程处于block的状态，redis采用的是渐进式的rehash策略。
+当字典完成初始化工作后才有可能开始rehash，rehash的条件是`rehashidx`是否为-1。为了防止rehash过程持续太久而导致进程处于block的状态，redis采用的是**渐进式的rehash策略**。
 
 redis的rehash有两种策略：
 
@@ -550,7 +550,7 @@ int dictRehash(dict *d, int n) {
     return 1;
 }
 ```
-rehash过程包括将一个bucket（有可能包含多个key，这些key以链表的形式存储）从旧的哈希表（ht[0]）移动到新的哈希表(ht[1])中。哈希表中会存在大量的空的 buckets，我们需要设置跳过空的bucket的最大的数目，否则不可预期结束时间（参数`n`表示rehash的非空bucket)。重新hash后，之后hash的键值对会插入到键值对链表的表头。
+rehash过程包括将一个bucket（有可能包含多个key，这些key以链表的形式存储）从旧的哈希表（ht[0]）移动到新的哈希表(ht[1])中。哈希表中会存在大量的空的 buckets，redis设置了跳过空的bucket的最大的数目，否则不可预期结束时间（参数`n`表示rehash的非空bucket)。重新hash后，之后hash的键值对会插入到键值对链表的表头。
 
 当 `d->ht[0].used == 0` 时rehash结束，`rehashidx`重新设置为 -1。
 
@@ -692,9 +692,9 @@ static long _dictKeyIndex(dict *d, const void *key, uint64_t hash, dictEntry **e
 }
 ```
 `existing` 是一个可选的输出参数，如果key存在，该指针指向找到的键值对`dictEntry`。查找的逻辑如下：
-1. 如果在`ht[1].table`中查找存在该key对应的索引
+1. 在`ht[0].table`中查找存在该key对应的索引
 2. 如果相应的bucket不为空时，遍历的bucket中的`DictEntry`链表以查找相同key值的`DictEntry`
-3. 如果该字典在rehash中，如果没有找到还需遍历ht[1]
+3. 如果该字典在rehash中，如果没有找到还需遍历`ht[1].table`
 4. 如果找到了，`existing`不为`NULL`时将`existing`指向找到的`DictEntry`，并返回索引；没有找到则返回-1
 
 设置键值对的key和value的值的方法`dictSetKey()`和`dictSetVal()`是宏函数：
@@ -822,7 +822,7 @@ dictEntry *dictFind(dict *d, const void *key)
 ```
 
 ### 迭代器
-当字典中的键值对数据很大时，可能会使用迭代器分配遍历值（`hscan`或者`scan`遍历redis中的所有键）。redis字典的迭代器分为两种，一种是safe迭代器另一种是unsafe迭代器，safe迭代器在迭代的过程中用户可以对该dict进行CURD操作，unsafe迭代器在迭代过程中用户只能对该dict执行迭代操作。
+当字典中的键值对数量很大时，可能会使用迭代器分配遍历值（`hscan`或者`scan`遍历redis中的所有键）。redis字典的迭代器分为两种，一种是safe迭代器另一种是unsafe迭代器，safe迭代器在迭代的过程中用户可以对该dict进行CURD操作，unsafe迭代器在迭代过程中用户只能对该dict执行迭代操作。
 
 当对字典执行safe迭代时会停止rehash操作以免扰乱迭代器的迭代。
 ```c
@@ -1051,7 +1051,7 @@ gcc -DDICT_BENCHMARK_MAIN -o dict dict.c sds.c zmalloc.c siphash.c
 ```
 
 ## 跳跃表
-跳跃表（skiplist）是一种有序链表扩展， 通过在每个节点中维持多个指向其他节点的指针， 来达到快速访问节点的目的。跳跃表的原理可以看这篇[文章](https://www.cnblogs.com/thrillerz/p/4505550.html)。跳跃表支持平均 O(\log N) 最坏 O(N) 复杂度的节点查找， 还可以通过顺序性操作来批量处理节点。
+跳跃表（skiplist）是一种有序链表扩展， 通过在每个节点中维持多个指向其他节点的指针， 来达到快速访问节点的目的。跳跃表的原理可以看这篇[文章](https://www.cnblogs.com/thrillerz/p/4505550.html)。跳跃表支持平均 O(log N) 最坏 O(N) 复杂度的节点查找， 还可以通过顺序性操作来批量处理节点。
 > 相关源文件：[server.h](https://github.com/antirez/redis/blob/5.0/src/dict.h), [t_zset.c](https://github.com/antirez/redis/blob/5.0/src/t_zset.c)
 
 Redis的跳跃表的结构定义如下：
@@ -1154,7 +1154,7 @@ static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
 }
 ```
 
-`_intsetValueEncoding()`通过将`value`和`INT32_MIN`,`INT32_MAX`等比较计算出升级后的编码类型，之后调整集合的大小。调整之后需要对当前存储的数值进行类型转换并重写到相应的内存中，`_intsetSet()`方法就是用来根据整数集合的编码类型来写值。redis在对整数集合升级时，采取的是从后忘前写的策略，这样先重写的数据不会覆盖还未重写的数据。
+`_intsetValueEncoding()`通过将`value`和`INT32_MIN`,`INT32_MAX`等比较计算出升级后的编码类型，之后调整集合的大小。调整之后需要对当前存储的数值进行类型转换并重写到相应的内存中，`_intsetSet()`方法就是用来根据整数集合的编码类型来写值。redis在对整数集合升级时，采取的是从后往前写的策略，这样先重写的数据不会覆盖还未重写的数据。
 
 从整数集合中删除一个元素比较简单，先判断要删除的元素是不是小于集合类型的最大值，如果是则在整数集合中找到该元素的位置。假设找到要删除的元素的位置是`pos`，redis要做的是将`pos+1`及其后面的元素往前移，这样就是覆盖了`pos`的值，最后对整数集合的大小进行调整`intsetResize()`。
 
@@ -1234,7 +1234,7 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
 
 当一个列表键只包含少量列表项， 并且每个列表项小整数值，或者长度比较短的字符串时，redis会采用压缩列表来作为列表键的底层实现。当一个哈希键只包含少量键值对， 并且每个键值对的键和值是小整数值， 或者长度比较短的字符串时，redis会采用压缩列表来作为哈希键的底层实现。
 
-压缩列表时redis为了节省内存开发的一种顺序编码的列表。它可以同时整数或者字符串，因为每次操作都需要对内存进行重新分配，因此实际的复杂度和内存的使用量相关。
+压缩列表时redis为了节省内存开发的一种顺序编码的列表。它可以同时存储整数或者字符串，因为每次操作都需要对内存进行重新分配，因此实际的复杂度和内存的使用量相关。
 
 压缩列表的结构如下：
 ![压缩列表的结构](./images/redis_ziplist.png)
@@ -1248,7 +1248,7 @@ static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
 Redis并没有直接使用上述的这几种数据结构来实现它的键值对数据库，而是基于这些数据结构创建了一个对象系统。这个系统包含`字符串对象`、`列表对象`、`哈希对象`、`集合对象`和`有序集合对象`这五种类型的对象，每种对象都用到了至少一种我们前面所介绍的数据结构。
 > 相关源文件: [server.h](https://github.com/antirez/redis/blob/5.0/src/server.h), [server.c](https://github.com/antirez/redis/blob/5.0/src/server.c), [object.c](https://github.com/antirez/redis/blob/5.0/src/object.c)
 
-Redis对象的定义是在`server.h`中的，
+Redis对象的定义是在`server.h`中的，`type`为redis的外部数据结构，即我们常用的redis五种数据类型，`encoding`为redis的内部数据结构实现，包括我们前面讲的数据类型。
 ```c
 typedef struct redisObject {
     unsigned type:4;        /* 对象的类型 */
@@ -1263,13 +1263,13 @@ typedef struct redisObject {
     void *ptr;
 } robj;
 ```
-redis使用`refcount`来实现内存的回收机制，通过跟踪对象的引用计数信息， 在适当的时候自动释放对象并进行内存回收。`lru`属性记录了对象最后一次被命令程序访问的时间或者是8位的最近访问频率和16位的访问时间。如果服务器打开了 `maxmemory` 选项， 并且服务器用于回收内存的算法为 `volatile-lru` 或者 `allkeys-lru` ， 那么当服务器占用的内存数超过了 `maxmemory` 选项所设置的上限值时， 空转时长较高的那部分键会优先被服务器释放， 从而回收内存。
+redis使用`refcount`来实现内存的回收机制。通过跟踪对象的引用计数信息， 在适当的时候自动释放对象并进行内存回收。`lru`属性记录了对象最后一次被命令程序访问的时间或者是8位的最近访问频率和16位的访问时间。如果服务器打开了 `maxmemory` 选项， 并且服务器用于回收内存的算法为 `volatile-lru` 或者 `allkeys-lru` ， 那么当服务器占用的内存数超过了 `maxmemory` 选项所设置的上限值时， 空转时长较高的那部分键会优先被服务器释放， 从而回收内存。
 
 - LRU: least recently used,最近最少使用
 - LFU: Least Frequently Used,算法根据数据的历史访问频率来淘汰数据，其核心思想是“如果数据过去被访问多次，那么将来被访问的频率也更高”。
 
 ### 创建对象
-Redis封装了多种对象创建的方法，比较基本的创建方法如`createObject()`。
+Redis封装了多种对象创建的方法，基本的创建方法如`createObject()`。
 ```c
 robj *createObject(int type, void *ptr) {
     robj *o = zmalloc(sizeof(*o));
@@ -1288,7 +1288,7 @@ robj *createObject(int type, void *ptr) {
     return o;
 }
 ```
-`type`为redis的外部数据结构，即我们常用的redis五种数据类型，`encoding`为redis的内部数据结构实现，包括我们前面讲的数据类型。基于`robj *createObject(int type, void *ptr);`方法可以创建各种类型的redis对象。相关的对象创建接口有：
+基于`robj *createObject(int type, void *ptr);`方法可以创建各种类型的redis对象。相关的对象创建接口有：
 ```c
 robj *createObject(int type, void *ptr);
 robj *createStringObject(const char *ptr, size_t len);
@@ -1307,7 +1307,7 @@ robj *createZsetZiplistObject(void);
 robj *createStreamObject(void);
 robj *createModuleObject(moduleType *mt, void *value);
 ```
-查看这些对象创建函数，在redis中，共定义了 5 + 2 种对象类型：
+在redis中，共定义了 5 + 2 种对象类型：
 ```c
 /* A redis object, that is a type able to hold a string / list / set */
 
@@ -1334,7 +1334,7 @@ robj *createModuleObject(moduleType *mt, void *value);
 ```
 `OBJ_MODULE`是一种特殊的对象类型，由redis模块管理。`OBJ_STREAM`类型是redis 5.0的新特性Stream的数据实现，可以查看相关的文档介绍（[Introduction to Redis Streams](https://redis.io/topics/streams-intro)）。
 
-根据配置，redis可以选择多种内存策略，用户可以选择以下五种策略：
+根据配置，redis可以选择多种内存策略，用户可以选择以下几种策略：
 - `noeviction`: 当内存使用超过配置的时候会返回错误，不会回收任何键。默认配置。
 - `volatile-lru`: 加入键的时候，如果过限，首先从设置了过期时间的键集合中回收最久没有使用的键
 - `allkeys-lru`: 新增键的时候，如果内存过限，首先通过LRU算法回收最久没有使用的键
@@ -1346,7 +1346,7 @@ robj *createModuleObject(moduleType *mt, void *value);
 
 
 ### 引用计数
-当对象的`refcount`等于1时，如果再次减少其引用次数，redis会回收该对象占用的内存。`freeStringObject()`，`freeListObject()`函数都是用来回收对象`o->ptr`指向的内存，最后通过`zfree(0)`释放对象结构体自身占用的内存。
+当对象的`refcount`等于1时，如果再次减少其引用次数，redis会回收该对象占用的内存。`freeStringObject()`，`freeListObject()`函数都是用来回收对象`o->ptr`指向的内存，最后通过`zfree(o)`释放对象结构体自身占用的内存。
 ```c
 void decrRefCount(robj *o) {
     if (o->refcount == 1) {
@@ -1383,7 +1383,7 @@ robj *makeObjectShared(robj *o) {
 ```
 
 ### 内存回收
-上面提到了当对一个`refcount = 1`的对象进行`decrRefCount()`操作减少引用计数时，Redis会回收该对象占用的内存。根据对象的`type`属性，redis调用相应的内存回收函数(`freeStringObject()`， `freeListObject()`, `freeSetObject()`, `freeZsetObject()`, `freeHashObject()`)来回收Redis提供的五种对象所占用的内存。内存回收函数又通过对象的编码属性`o->encoding`来执行相应的内存回收方式。如字典，它的底层有可能时压缩列表编码的，也有可能是哈希表编码的，不同的编码方式，内存回收时的方法也不同。
+上面提到了当对一个`refcount = 1`的对象进行`decrRefCount()`操作减少引用计数时，Redis会回收该对象占用的内存。根据对象的`type`属性，redis调用相应的内存回收函数(`freeStringObject()`， `freeListObject()`, `freeSetObject()`, `freeZsetObject()`, `freeHashObject()`)来回收Redis提供的五种对象所占用的内存。内存回收函数又通过对象的编码属性`o->encoding`来执行相应的数据结构的内存回收方法。如字典，它的底层有可能时压缩列表编码的，也有可能是哈希表编码的，不同的编码方式，内存回收时的方法也不同。
 
 ```c
 void freeStringObject(robj *o) {
