@@ -1447,6 +1447,65 @@ void freeHashObject(robj *o) {
 
 最后通过`zfree()`回收对象结构体自身占用的内存。
 
+## 数据库
+Redis是一个键值对数据库，其中的每个数据库都由`redisDb`结构体表示。多个数据库通过整型`id`成员区分。
+> 相关源文件: [server.h](https://github.com/antirez/redis/blob/5.0/src/server.h), [server.c](https://github.com/antirez/redis/blob/5.0/src/server.c), [db.c](https://github.com/antirez/redis/blob/5.0/src/db.c)
+
+```c
+typedef struct redisDb {
+    dict *dict;                 /* 键空间 The keyspace for this DB */
+    dict *expires;              /* Timeout of keys with a timeout set */
+    dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP)*/
+    dict *ready_keys;           /* Blocked keys that received a PUSH */
+    dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS */
+    int id;                     /* Database ID */
+    long long avg_ttl;          /* Average TTL, just for stats */
+    list *defrag_later;         /* List of key names to attempt to defrag one by one, gradually. */
+} redisDb;
+```
+数据库中的键空间示意图如下：
+![redis数据库](./images/redisdb.png)
+
+键空间和用户用到的数据库是直接对应的：
+- 键空间就是数据库的键，每一个键都是一个字符串对象
+- 键空间的值是数据库的值，每个值可以是字符串对象、列表对象、哈希表对象、集合对象和有序集合对象在内的任意一种 Redis 对象。
+
+与数据库操作相关的API大部分都在`db.c`中实现，主要也是对`dict`字典方法的封装。
+
+redis维护了数据库服务的全局状态结构体`redisServer`，其中的`db`成员指向的就是`redisDb`数组。
+```c{12}
+struct redisServer {
+    /* General */
+    pid_t pid;                  /* Main process pid. */
+    char *configfile;           /* Absolute config file path, or NULL */
+    char *executable;           /* Absolute executable file path. */
+    char **exec_argv;           /* Executable argv vector (copy). */
+    int dynamic_hz;             /* Change hz value depending on # of clients. */
+    int config_hz;              /* Configured HZ value. May be different than
+                                   the actual 'hz' field value if dynamic-hz
+                                   is enabled. */
+    int hz;                     /* serverCron() calls frequency in hertz */
+    redisDb *db;                /* 数组，保存这服务器所有的数据库 */
+    dict *commands;             /* Command table */
+    dict *orig_commands;        /* Command table before command renaming. */
+    aeEventLoop *el;
+    // ...
+};
+````
+基于多路复用，redis为每个连接上的客户端都维护了一个状态的结构体`client`。其中的`db`成员指向的是当前客户端选择了的数据库。
+```c{6}
+/* With multiplexing we need to take per-client state.
+ * Clients are taken in a linked list. */
+typedef struct client {
+    uint64_t id;            /* Client incremental unique ID. */
+    int fd;                 /* Client socket. */
+    redisDb *db;            /* Pointer to currently SELECTed DB. */
+    robj *name;             /* As set by CLIENT SETNAME. */
+    // ...
+} client;
+```
+
+
 ## 参考
 1. [Redis 设计与实现](http://redisbook.com/)
 2. [跳跃表原理](https://www.cnblogs.com/thrillerz/p/4505550.html)

@@ -1,3 +1,7 @@
+---
+sidebar: auto
+---
+
 # Redis源码阅读
 
 > Redis项目分支：[5.0](https://github.com/antirez/redis/tree/5.0)
