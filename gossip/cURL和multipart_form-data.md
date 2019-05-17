@@ -1,3 +1,7 @@
+---
+sidebar: auto
+---
+
 # cURL和multipart/form-data
 
 ## cURL的基本用法

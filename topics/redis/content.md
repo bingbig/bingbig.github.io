@@ -10,6 +10,7 @@ sidebar: auto
 
 ## 设计
 - [数据结构和对象](./structures.md)
+- [Redis客户端](./client.md)
 - [全局变量server](./server.md)
 - [Redis启动流程](./redisinit.md)
 - [Redis事件驱动](./event_driven_library.md)
