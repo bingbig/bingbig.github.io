@@ -179,10 +179,7 @@ module.exports = {
                 'softwares_install/interproscan',
                 'scripts/gtf2gff3.md'
             ],
-            '/gossip/' : [
-                'my-vscode-configuration',
-                'curl-multipart-form-data'
-            ],
+            '/gossip/' : [],
             '/': [
                 '',
                 'aboutme',
