@@ -27,7 +27,7 @@ if (argc == 0 && !config.eval) {
 当类型为`SOCK_STREAM`的套接字不再连接时，进程写该套接字会产生`SIGPIPE`信号。`signal(SIGPIPE, SIG_IGN);`只是简单的忽略这个信号，以免客户端因为和服务端失去连接而中断。
 
 ## 初始化和连接服务器
-`cliConnect()`函数会根据配置`config`尝试通过TCP或者unix socket连接服务器，连接成功后为已连接的套接字设置`SO_KEEPALIVE`选项来检测服务端是否停止服务，也可以避免长时间任务执行因为超时而中断。如果redis设置了鉴权，客户端连接函数还会向服务端发送一条命令来验证用户是否合法。另外`cliConnect()`函数调用`redisConnect()`连接成功后会返回初始化的redis客户端的上下文描述结构体`context`，结构体的类型名为`redisContext`。
+`cliConnect()`函数会根据配置`config`尝试通过TCP或者unix socket连接服务器，连接成功后为已连接的套接字设置`SO_KEEPALIVE`选项来检测服务端是否停止服务，也可以避免耗时长的任务因为超时而中断。如果redis设置了鉴权，客户端连接函数还会向服务端发送一条命令来验证用户是否合法。另外`cliConnect()`函数调用`redisConnect()`连接成功后会返回初始化的redis客户端的上下文描述结构体`context`，结构体的类型名为`redisContext`。
 
 ### auth命令
 
@@ -61,9 +61,9 @@ redisCommand
                 redisBufferRead
                 redisGetReplyFromReader
 ```
-`c->obuf`这个字符串是redis客户端程序的全局变量`context`的成员`obuf`，它被用作命令缓冲区。`__redisBlockForReply()`会根据`c->flags & REDIS_BLOCK`来判断是否阻塞执行redis命令：如果是的话，命令将缓冲到缓冲区`obuf`中，待合适的时机一次性发送给客户端执行。
+`c->obuf`这个字符串是redis客户端程序的全局变量`context`的成员`obuf`，它被用作命令缓冲区。`__redisBlockForReply()`会根据`c->flags & REDIS_BLOCK`来判断是否阻塞执行redis命令：如果是非阻塞的话，多条命令将缓冲到缓冲区`obuf`中，待合适的时机一次性发送给客户端执行。
 
-上面提到过，在调用`redisConnect()` 初始化了`context`全局变量。初始化时它执行了`c->flags |= REDIS_BLOCK;`，使得一开始redis客户端执行命令是阻塞型的。于是，`__redisBlockForReply()`就会执行`redisGetReply()`来发送(`redisBufferWrite()`)缓冲区中的命令并且读取(`redisBufferRead()`, `redisGetReplyFromReader()`)来自服务端的返回数据。
+上面提到过，在调用`redisConnect()` 初始化了`context`全局变量。初始化时它执行了`c->flags |= REDIS_BLOCK;`，使得一开始redis客户端执行命令是阻塞型的。于是，`__redisBlockForReply()`就会立即执行`redisGetReply()`来发送(`redisBufferWrite()`)缓冲区中的命令并且读取(`redisBufferRead()`, `redisGetReplyFromReader()`)来自服务端的返回数据。
 
 关于redis客户端和服务端之间的通信协议`RESP`，网上已经有很多的介绍了，这里就不加以赘述了。
 
