@@ -7,6 +7,7 @@ sidebar: auto
 
 在redis的启动过程中，会监听redis服务器配置文件指定的地址和端口，并且初始化一组TCP socket文件描述符，这些监听描述符保存在全局变量`server`的`ipfd`成员中（该成员是一个16个元素的数组），其数量由`server.ipfd_count`记录。来自unix域socket连接描述符记录在`server.sofd`，我们暂时只讨论TCP连接。
 
+## 监听端口
 ```c
 /* Open the TCP listening socket for the user commands. */
 if (server.port != 0 &&
@@ -14,6 +15,7 @@ if (server.port != 0 &&
     exit(1);
 ```
 
+## 连接应答处理器
 在初始化监听描述符之后，redis为这些描述符的可读事件绑定了[连接应答处理器](./event_driven_library.html#_1-reactor)。
 
 ```c
@@ -50,6 +52,7 @@ void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
 ```
 连接应答处理器(`acceptTcpHandler`)调用套接字函数`accept`获取到相应的连接描述符，然后执行接受处理器(`acceptCommonHandler`)为该连接套接字初始化一个`client`对象，并且为这个已连接套接字绑定了可读事件的处理器(`readQueryFromClient`)，最后这个`client`对象连接到`server.clients`链表的尾部。
 
+## 解析缓冲区命令
 ```c{11}
 acceptTcpHandler
     anetTcpAccept
@@ -111,80 +114,176 @@ if (c->reqtype == PROTO_REQ_INLINE) {
 
 如果客户端发来的数据的第一个字符是`*`（或者下一次解析的第一个字符是`*`）时，那么数据将被当做`multibulk`处理，否则将被当做`inline`处理。`Inline`的具体解析函数是`processInlineBuffer()`，`multibulk`的具体解析函数是`processMultibulkBuffer()`。 当客户端传送的数据已经解析出命令字段和参数字段，字段数组保存在`client->argv`（各个字段已经被转换成redis字符串对象`createObject(OBJ_STRING,argv[j])`），字段个数保存在`client->argc`。接下来进行命令处理，函数是`processCommand()`。
 
+## 执行命令
+`processCommand()`函数体很长，我们来一步步分解。
+### `quit`特殊处理
 ```c
-/* If this function gets called we already read a whole
- * command, arguments are in the client argv/argc fields.
- * processCommand() execute the command or prepare the
- * server for a bulk read from the client.
- *
- * If C_OK is returned the client is still alive and valid and
- * other operations can be performed by the caller. Otherwise
- * if C_ERR is returned the client was destroyed (i.e. after QUIT). */
-int processCommand(client *c) {
-    /* The QUIT command is handled separately. Normal command procs will
-     * go through checking for replication and QUIT will cause trouble
-     * when FORCE_REPLICATION is enabled and would be implemented in
-     * a regular command proc. */
-    if (!strcasecmp(c->argv[0]->ptr,"quit")) {
-        addReply(c,shared.ok);
-        c->flags |= CLIENT_CLOSE_AFTER_REPLY;
-        return C_ERR;
-    }
+/* The QUIT command is handled separately. Normal command procs will
+ * go through checking for replication and QUIT will cause trouble
+ * when FORCE_REPLICATION is enabled and would be implemented in
+ * a regular command proc. */
+if (!strcasecmp(c->argv[0]->ptr,"quit")) {
+    addReply(c,shared.ok);
+    c->flags |= CLIENT_CLOSE_AFTER_REPLY;
+    return C_ERR;
+}
+```
+`quit`命令比较特殊，一般的命令会走完复制过程，但是当启用了`FORCE_REPLICATION`时，`quit`命令会引起问题。
 
-    /* Now lookup the command and check ASAP about trivial error conditions
-     * such as wrong arity, bad command name and so forth. */
-    c->cmd = c->lastcmd = lookupCommand(c->argv[0]->ptr);
-    if (!c->cmd) {
-        flagTransaction(c);
-        sds args = sdsempty();
-        int i;
-        for (i=1; i < c->argc && sdslen(args) < 128; i++)
-            args = sdscatprintf(args, "`%.*s`, ", 128-(int)sdslen(args), (char*)c->argv[i]->ptr);
-        addReplyErrorFormat(c,"unknown command `%s`, with args beginning with: %s",
-            (char*)c->argv[0]->ptr, args);
-        sdsfree(args);
-        return C_OK;
-    } else if ((c->cmd->arity > 0 && c->cmd->arity != c->argc) ||
-               (c->argc < -c->cmd->arity)) {
-        flagTransaction(c);
-        addReplyErrorFormat(c,"wrong number of arguments for '%s' command",
-            c->cmd->name);
-        return C_OK;
-    }
+### 查询命令表
+`lookupCommand()`函数从字典`server.commands`中查找和第一个参数`c->argv[0]->ptr`一直的命令。
 
-    /* Check if the user is authenticated */
-    if (server.requirepass && !c->authenticated && c->cmd->proc != authCommand)
-    {
-        flagTransaction(c);
-        addReply(c,shared.noautherr);
-        return C_OK;
-    }
+```c{3}
+/* Now lookup the command and check ASAP about trivial error conditions
+* such as wrong arity, bad command name and so forth. */
+c->cmd = c->lastcmd = lookupCommand(c->argv[0]->ptr);
+if (!c->cmd) {
+    flagTransaction(c);
+    sds args = sdsempty();
+    int i;
+    for (i=1; i < c->argc && sdslen(args) < 128; i++)
+        args = sdscatprintf(args, "`%.*s`, ", 128-(int)sdslen(args), (char*)c->argv[i]->ptr);
+    addReplyErrorFormat(c,"unknown command `%s`, with args beginning with: %s",
+    (char*)c->argv[0]->ptr, args);
+    sdsfree(args);
+    return C_OK;
+} else if ((c->cmd->arity > 0 && c->cmd->arity != c->argc) ||
+        (c->argc < -c->cmd->arity)) {
+    flagTransaction(c);
+    addReplyErrorFormat(c,"wrong number of arguments for '%s' command",
+    c->cmd->name);
+    return C_OK;
+}
+```
+那命令表是什么呢？在Redis服务器初始化配置函数`initServerConfig()`中初始化了全局变量`server`中与命令相关的成员。
 
-    /* If cluster is enabled perform the cluster redirection here.
-     * However we don't perform the redirection if:
-     * 1) The sender of this command is our master.
-     * 2) The command has no key arguments. */
-    if (server.cluster_enabled &&
-        !(c->flags & CLIENT_MASTER) &&
-        !(c->flags & CLIENT_LUA &&
-          server.lua_caller->flags & CLIENT_MASTER) &&
-        !(c->cmd->getkeys_proc == NULL && c->cmd->firstkey == 0 &&
-          c->cmd->proc != execCommand))
-    {
-        int hashslot;
-        int error_code;
-        clusterNode *n = getNodeByQuery(c,c->cmd,c->argv,c->argc,
-                                        &hashslot,&error_code);
-        if (n == NULL || n != server.cluster->myself) {
-            if (c->cmd->proc == execCommand) {
-                discardTransaction(c);
-            } else {
-                flagTransaction(c);
-            }
-            clusterRedirectClient(c,n,hashslot,error_code);
-            return C_OK;
+```c
+/* Command table -- we initiialize it here as it is part of the
+ * initial configuration, since command names may be changed via
+ * redis.conf using the rename-command directive. */
+server.commands = dictCreate(&commandTableDictType,NULL);
+server.orig_commands = dictCreate(&commandTableDictType,NULL);
+populateCommandTable();
+server.delCommand = lookupCommandByCString("del");
+server.multiCommand = lookupCommandByCString("multi");
+server.lpushCommand = lookupCommandByCString("lpush");
+server.lpopCommand = lookupCommandByCString("lpop");
+server.rpopCommand = lookupCommandByCString("rpop");
+server.zpopminCommand = lookupCommandByCString("zpopmin");
+server.zpopmaxCommand = lookupCommandByCString("zpopmax");
+server.sremCommand = lookupCommandByCString("srem");
+server.execCommand = lookupCommandByCString("exec");
+server.expireCommand = lookupCommandByCString("expire");
+server.pexpireCommand = lookupCommandByCString("pexpire");
+server.xclaimCommand = lookupCommandByCString("xclaim");
+server.xgroupCommand = lookupCommandByCString("xgroup");
+```
+其中`populateCommandTable()`函数将写死的命令列表经过一些处理后保存到`server.commands`和`server.orig_commands`中。下面我们列出部分命令列表中的命令来看：数组的每个元素都是`redisCommand`类型的结构体，其成员分别表示`命令名`，`命令函数`，`参数个数`(-N表示 >=N)，`sflag`(字符串表示的命令标志)，`flag`(位掩码表示的命令标志),`获取key的函数`，`第一个key的索引`，`最后一个key的索引`，`key和key之间的步长`,`微秒数`(由redis计算得到)，`调用次数`。
+
+在下面的代码中我们可以看到字符串表示的命令标志如`rF`，`wm`, `wRF`等等分别是什么意思呢？
+
+- w 写命令
+- r 读命令
+- m 每次调用都会增加内存使用，不允许超出内存
+- F 快速命令，时间复杂度为O(1),或者O(log(N))
+- 等等
+
+```c
+struct redisCommand redisCommandTable[] = {
+    {"module",moduleCommand,-2,"as",0,NULL,0,0,0,0,0},
+    {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"set",setCommand,-3,"wm",0,NULL,1,1,1,0,0},
+    {"setnx",setnxCommand,3,"wmF",0,NULL,1,1,1,0,0},
+    {"setex",setexCommand,4,"wm",0,NULL,1,1,1,0,0},
+    {"psetex",psetexCommand,4,"wm",0,NULL,1,1,1,0,0},
+    {"append",appendCommand,3,"wm",0,NULL,1,1,1,0,0},
+    {"strlen",strlenCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"del",delCommand,-2,"w",0,NULL,1,-1,1,0,0},
+    {"unlink",unlinkCommand,-2,"wF",0,NULL,1,-1,1,0,0},
+    // ...
+    {"xack",xackCommand,-4,"wF",0,NULL,1,1,1,0,0},
+    {"xpending",xpendingCommand,-3,"rR",0,NULL,1,1,1,0,0},
+    {"xclaim",xclaimCommand,-6,"wRF",0,NULL,1,1,1,0,0},
+    {"xinfo",xinfoCommand,-2,"rR",0,NULL,2,2,1,0,0},
+    {"xdel",xdelCommand,-3,"wF",0,NULL,1,1,1,0,0},
+    {"xtrim",xtrimCommand,-2,"wFR",0,NULL,1,1,1,0,0},
+    {"post",securityWarningCommand,-1,"lt",0,NULL,0,0,0,0,0},
+    {"host:",securityWarningCommand,-1,"lt",0,NULL,0,0,0,0,0},
+    {"latency",latencyCommand,-2,"aslt",0,NULL,0,0,0,0,0},
+    {"lolwut",lolwutCommand,-1,"r",0,NULL,0,0,0,0,0}
+};
+```
+函数`populateCommandTable()`初始化命令表时，会以命令名为key, `redisCommand`结构体为值保存到`server.commands`和`server.orig_commands`中。
+
+在查询命令表时，如果没有找到命令或者`client->argc`的参数的数目和命令表中设定的命令需要的参数数不一致时，会向客户发发送错误信息。
+
+### 检查是否鉴权
+```c
+/* Check if the user is authenticated */
+if (server.requirepass && !c->authenticated && c->cmd->proc != authCommand)
+{
+    flagTransaction(c);
+    addReply(c,shared.noautherr);
+    return C_OK;
+}
+```
+
+### 检查是否在集群模式下执行
+如果是在集群模式下执行，可能还需要在集群中重定向客户端。
+```c
+/* If cluster is enabled perform the cluster redirection here.
+* However we don't perform the redirection if:
+* 1) The sender of this command is our master.
+* 2) The command has no key arguments. */
+if (server.cluster_enabled && !(c->flags & CLIENT_MASTER) && !(c->flags & CLIENT_LUA && 
+    server.lua_caller->flags & CLIENT_MASTER) && 
+    !(c->cmd->getkeys_proc == NULL && c->cmd->firstkey == 0 &&
+        c->cmd->proc != execCommand))
+{
+    int hashslot;
+    int error_code;
+    clusterNode *n = getNodeByQuery(c,c->cmd,c->argv,c->argc,
+                                    &hashslot,&error_code);
+    if (n == NULL || n != server.cluster->myself) {
+        if (c->cmd->proc == execCommand) {
+            discardTransaction(c);
+        } else {
+            flagTransaction(c);
         }
+        clusterRedirectClient(c,n,hashslot,error_code);
+        return C_OK;
     }
+}
+```
+### 最大内存设置
+```c
+/* Handle the maxmemory directive.
+ *
+ * Note that we do not want to reclaim memory if we are here re-entering
+ * the event loop since there is a busy Lua script running in timeout
+ * condition, to avoid mixing the propagation of scripts with the
+ * propagation of DELs due to eviction. */
+if (server.maxmemory && !server.lua_timedout) {
+    int out_of_memory = freeMemoryIfNeededAndSafe() == C_ERR;
+    /* freeMemoryIfNeeded may flush slave output buffers. This may result
+        * into a slave, that may be the active client, to be freed. */
+    if (server.current_client == NULL) return C_ERR;
+
+    /* It was impossible to free enough memory, and the command the client
+        * is trying to execute is denied during OOM conditions or the client
+        * is in MULTI/EXEC context? Error. */
+    if (out_of_memory &&
+        (c->cmd->flags & CMD_DENYOOM ||
+            (c->flags & CLIENT_MULTI && c->cmd->proc != execCommand))) {
+        flagTransaction(c);
+        addReply(c, shared.oomerr);
+        return C_OK;
+    }
+}
+```
+
+
+```
 
     /* Handle the maxmemory directive.
      *
