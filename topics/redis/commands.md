@@ -114,7 +114,7 @@ if (c->reqtype == PROTO_REQ_INLINE) {
 
 如果客户端发来的数据的第一个字符是`*`（或者下一次解析的第一个字符是`*`）时，那么数据将被当做`multibulk`处理，否则将被当做`inline`处理。`Inline`的具体解析函数是`processInlineBuffer()`，`multibulk`的具体解析函数是`processMultibulkBuffer()`。 当客户端传送的数据已经解析出命令字段和参数字段，字段数组保存在`client->argv`（各个字段已经被转换成redis字符串对象`createObject(OBJ_STRING,argv[j])`），字段个数保存在`client->argc`。接下来进行命令处理，函数是`processCommand()`。
 
-## 执行命令
+## 处理命令
 `processCommand()`函数体很长，我们来一步步分解。
 ### `quit`特殊处理
 ```c
@@ -255,7 +255,7 @@ if (server.cluster_enabled && !(c->flags & CLIENT_MASTER) && !(c->flags & CLIENT
     }
 }
 ```
-### 最大内存设置
+### 维持最大内存设置
 ```c
 /* Handle the maxmemory directive.
  *
@@ -282,134 +282,129 @@ if (server.maxmemory && !server.lua_timedout) {
 }
 ```
 
-
-```
-
-    /* Handle the maxmemory directive.
-     *
-     * Note that we do not want to reclaim memory if we are here re-entering
-     * the event loop since there is a busy Lua script running in timeout
-     * condition, to avoid mixing the propagation of scripts with the
-     * propagation of DELs due to eviction. */
-    if (server.maxmemory && !server.lua_timedout) {
-        int out_of_memory = freeMemoryIfNeededAndSafe() == C_ERR;
-        /* freeMemoryIfNeeded may flush slave output buffers. This may result
-         * into a slave, that may be the active client, to be freed. */
-        if (server.current_client == NULL) return C_ERR;
-
-        /* It was impossible to free enough memory, and the command the client
-         * is trying to execute is denied during OOM conditions or the client
-         * is in MULTI/EXEC context? Error. */
-        if (out_of_memory &&
-            (c->cmd->flags & CMD_DENYOOM ||
-             (c->flags & CLIENT_MULTI && c->cmd->proc != execCommand))) {
-            flagTransaction(c);
-            addReply(c, shared.oomerr);
-            return C_OK;
-        }
-    }
-
-    /* Don't accept write commands if there are problems persisting on disk
-     * and if this is a master instance. */
-    int deny_write_type = writeCommandsDeniedByDiskError();
-    if (deny_write_type != DISK_ERROR_TYPE_NONE &&
-        server.masterhost == NULL &&
-        (c->cmd->flags & CMD_WRITE ||
-         c->cmd->proc == pingCommand))
-    {
-        flagTransaction(c);
-        if (deny_write_type == DISK_ERROR_TYPE_RDB)
-            addReply(c, shared.bgsaveerr);
-        else
-            addReplySds(c,
-                sdscatprintf(sdsempty(),
-                "-MISCONF Errors writing to the AOF file: %s\r\n",
-                strerror(server.aof_last_write_errno)));
-        return C_OK;
-    }
-
-    /* Don't accept write commands if there are not enough good slaves and
-     * user configured the min-slaves-to-write option. */
-    if (server.masterhost == NULL &&
-        server.repl_min_slaves_to_write &&
-        server.repl_min_slaves_max_lag &&
-        c->cmd->flags & CMD_WRITE &&
-        server.repl_good_slaves_count < server.repl_min_slaves_to_write)
-    {
-        flagTransaction(c);
-        addReply(c, shared.noreplicaserr);
-        return C_OK;
-    }
-
-    /* Don't accept write commands if this is a read only slave. But
-     * accept write commands if this is our master. */
-    if (server.masterhost && server.repl_slave_ro &&
-        !(c->flags & CLIENT_MASTER) &&
-        c->cmd->flags & CMD_WRITE)
-    {
-        addReply(c, shared.roslaveerr);
-        return C_OK;
-    }
-
-    /* Only allow SUBSCRIBE and UNSUBSCRIBE in the context of Pub/Sub */
-    if (c->flags & CLIENT_PUBSUB &&
-        c->cmd->proc != pingCommand &&
-        c->cmd->proc != subscribeCommand &&
-        c->cmd->proc != unsubscribeCommand &&
-        c->cmd->proc != psubscribeCommand &&
-        c->cmd->proc != punsubscribeCommand) {
-        addReplyError(c,"only (P)SUBSCRIBE / (P)UNSUBSCRIBE / PING / QUIT allowed in this context");
-        return C_OK;
-    }
-
-    /* Only allow commands with flag "t", such as INFO, SLAVEOF and so on,
-     * when slave-serve-stale-data is no and we are a slave with a broken
-     * link with master. */
-    if (server.masterhost && server.repl_state != REPL_STATE_CONNECTED &&
-        server.repl_serve_stale_data == 0 &&
-        !(c->cmd->flags & CMD_STALE))
-    {
-        flagTransaction(c);
-        addReply(c, shared.masterdownerr);
-        return C_OK;
-    }
-
-    /* Loading DB? Return an error if the command has not the
-     * CMD_LOADING flag. */
-    if (server.loading && !(c->cmd->flags & CMD_LOADING)) {
-        addReply(c, shared.loadingerr);
-        return C_OK;
-    }
-
-    /* Lua script too slow? Only allow a limited number of commands. */
-    if (server.lua_timedout &&
-          c->cmd->proc != authCommand &&
-          c->cmd->proc != replconfCommand &&
-        !(c->cmd->proc == shutdownCommand &&
-          c->argc == 2 &&
-          tolower(((char*)c->argv[1]->ptr)[0]) == 'n') &&
-        !(c->cmd->proc == scriptCommand &&
-          c->argc == 2 &&
-          tolower(((char*)c->argv[1]->ptr)[0]) == 'k'))
-    {
-        flagTransaction(c);
-        addReply(c, shared.slowscripterr);
-        return C_OK;
-    }
-
-    /* Exec the command */
-    if (c->flags & CLIENT_MULTI &&
-        c->cmd->proc != execCommand && c->cmd->proc != discardCommand &&
-        c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)
-    {
-        queueMultiCommand(c);
-        addReply(c,shared.queued);
-    } else {
-        call(c,CMD_CALL_FULL);
-        c->woff = server.master_repl_offset;
-        if (listLength(server.ready_keys))
-            handleClientsBlockedOnKeys();
-    }
+### 磁盘故障禁止写命令
+```c
+/* Don't accept write commands if there are problems persisting on disk
+    * and if this is a master instance. */
+int deny_write_type = writeCommandsDeniedByDiskError();
+if (deny_write_type != DISK_ERROR_TYPE_NONE &&
+    server.masterhost == NULL &&
+    (c->cmd->flags & CMD_WRITE ||
+        c->cmd->proc == pingCommand))
+{
+    flagTransaction(c);
+    if (deny_write_type == DISK_ERROR_TYPE_RDB)
+        addReply(c, shared.bgsaveerr);
+    else
+        addReplySds(c,
+            sdscatprintf(sdsempty(),
+            "-MISCONF Errors writing to the AOF file: %s\r\n",
+            strerror(server.aof_last_write_errno)));
     return C_OK;
 }
 ```
+
+### 从库数目不够时禁写命令
+```c
+/* Don't accept write commands if there are not enough good slaves and
+    * user configured the min-slaves-to-write option. */
+if (server.masterhost == NULL &&
+    server.repl_min_slaves_to_write &&
+    server.repl_min_slaves_max_lag &&
+    c->cmd->flags & CMD_WRITE &&
+    server.repl_good_slaves_count < server.repl_min_slaves_to_write)
+{
+    flagTransaction(c);
+    addReply(c, shared.noreplicaserr);
+    return C_OK;
+}
+```
+
+### 只读从库禁止非主库的写命令
+```c
+/* Don't accept write commands if this is a read only slave. But
+    * accept write commands if this is our master. */
+if (server.masterhost && server.repl_slave_ro &&
+    !(c->flags & CLIENT_MASTER) &&
+    c->cmd->flags & CMD_WRITE)
+{
+    addReply(c, shared.roslaveerr);
+    return C_OK;
+}
+```
+
+### 订阅与发布
+```c
+/* Only allow SUBSCRIBE and UNSUBSCRIBE in the context of Pub/Sub */
+if (c->flags & CLIENT_PUBSUB &&
+    c->cmd->proc != pingCommand &&
+    c->cmd->proc != subscribeCommand &&
+    c->cmd->proc != unsubscribeCommand &&
+    c->cmd->proc != psubscribeCommand &&
+    c->cmd->proc != punsubscribeCommand) {
+    addReplyError(c,"only (P)SUBSCRIBE / (P)UNSUBSCRIBE / PING / QUIT allowed in this context");
+    return C_OK;
+}
+```
+
+### 主从连接断开且关闭`slave-serve-stale-data`只允许`t`命令
+```c
+/* Only allow commands with flag "t", such as INFO, SLAVEOF and so on,
+ * when slave-serve-stale-data is no and we are a slave with a broken
+ * link with master. */
+if (server.masterhost && server.repl_state != REPL_STATE_CONNECTED &&
+    server.repl_serve_stale_data == 0 &&
+    !(c->cmd->flags & CMD_STALE))
+{
+    flagTransaction(c);
+    addReply(c, shared.masterdownerr);
+    return C_OK;
+}
+```
+
+### `CMD_LOADING`标志
+```c
+/* Loading DB? Return an error if the command has not the
+ * CMD_LOADING flag. */
+if (server.loading && !(c->cmd->flags & CMD_LOADING)) {
+    addReply(c, shared.loadingerr);
+    return C_OK;
+}
+```
+
+### 慢速lua脚本
+```c
+/* Lua script too slow? Only allow a limited number of commands. */
+if (server.lua_timedout &&
+        c->cmd->proc != authCommand &&
+        c->cmd->proc != replconfCommand &&
+    !(c->cmd->proc == shutdownCommand &&
+        c->argc == 2 &&
+        tolower(((char*)c->argv[1]->ptr)[0]) == 'n') &&
+    !(c->cmd->proc == scriptCommand &&
+        c->argc == 2 &&
+        tolower(((char*)c->argv[1]->ptr)[0]) == 'k'))
+{
+    flagTransaction(c);
+    addReply(c, shared.slowscripterr);
+    return C_OK;
+}
+```
+
+### 执行命令
+```c
+/* Exec the command */
+if (c->flags & CLIENT_MULTI &&
+    c->cmd->proc != execCommand && c->cmd->proc != discardCommand &&
+    c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)
+{
+    queueMultiCommand(c);
+    addReply(c,shared.queued);
+} else {
+    call(c,CMD_CALL_FULL);
+    c->woff = server.master_repl_offset;
+    if (listLength(server.ready_keys))
+        handleClientsBlockedOnKeys();
+}
+```
+
