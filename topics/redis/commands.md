@@ -407,4 +407,55 @@ if (c->flags & CLIENT_MULTI &&
         handleClientsBlockedOnKeys();
 }
 ```
+如果客户端设置了开启事务，那么就会将命令加到事务队列中`queueMultiCommand()`，函数如下：
+```c
+/* Add a new command into the MULTI commands queue */
+void queueMultiCommand(client *c) {
+    multiCmd *mc;
+    int j;
 
+    c->mstate.commands = zrealloc(c->mstate.commands,
+            sizeof(multiCmd)*(c->mstate.count+1));
+    mc = c->mstate.commands+c->mstate.count;
+    mc->cmd = c->cmd;
+    mc->argc = c->argc;
+    mc->argv = zmalloc(sizeof(robj*)*c->argc);
+    memcpy(mc->argv,c->argv,sizeof(robj*)*c->argc);
+    for (j = 0; j < c->argc; j++)
+        incrRefCount(mc->argv[j]);
+    c->mstate.count++;
+    c->mstate.cmd_flags |= c->cmd->flags;
+}
+```
+该函数将命令通过`memcpy`复制命令参数对象到`c->mstate.commands`的数组（队列）尾部，然后调用`incrRefCount`增加引用次数。值得注意的是：`memcpy`支持复制了对象结构，并没有复制对象指向的数据，但是也仅仅是增加了`mc->argv[j]`的引用次数，没有增加或者释放`c->argv[j]`，这是为何呢？？？【这里mark一下】。
+
+之后执行`call()函数`，该函数会调用`c->cmd->proc(c)`来执行命令。
+
+## 命令的实现
+下面我们再看看几个常见命令是怎么实现的。
+
+### `get`
+`get`命令的实现函数是`getCommand`。返回key所关联的字符串值。如果key不存在那么返回特殊值 `nil` 。假如key储存的值不是字符串类型，返回一个错误，因为`GET`只能用于处理字符串值。
+
+`getCommand`函数调用的是`getGenericCommand()`并把参数客户端在服务器中的上下文结构体`client`作为参数传递给它。查找整个redis项目，`getGenericCommand()`只被`getCommand`和`getsetCommand`调用了，它应该是用来查找字符串和集合的公共逻辑。
+```c
+int getGenericCommand(client *c) {
+    robj *o;
+
+    if ((o = lookupKeyReadOrReply(c,c->argv[1],shared.nullbulk)) == NULL)
+        return C_OK;
+
+    if (o->type != OBJ_STRING) {
+        addReply(c,shared.wrongtypeerr);
+        return C_ERR;
+    } else {
+        addReplyBulk(c,o);
+        return C_OK;
+    }
+}
+
+void getCommand(client *c) {
+    getGenericCommand(c);
+}
+```
+`c->argv[0]`是命令名（`get`），`c->argv[1]`是第一个参数，也就是key字符串。`lookupKeyReadOrReply()`函数是查询的核心。

@@ -1464,6 +1464,7 @@ typedef struct redisDb {
 } redisDb;
 ```
 数据库中的键空间示意图如下：
+
 ![redis数据库](./images/redisdb.png)
 
 键空间和用户用到的数据库是直接对应的：
