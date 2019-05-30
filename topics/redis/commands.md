@@ -437,7 +437,7 @@ void queueMultiCommand(client *c) {
 ### `get`
 `get`命令的实现函数是`getCommand`。返回key所关联的字符串值。如果key不存在那么返回特殊值 `nil` 。假如key储存的值不是字符串类型，返回一个错误，因为`GET`只能用于处理字符串值。
 
-`getCommand`函数调用的是`getGenericCommand()`并把参数客户端在服务器中的上下文结构体`client`作为参数传递给它。查找整个redis项目，`getGenericCommand()`只被`getCommand`和`getsetCommand`调用了，它应该是用来查找字符串和集合的公共逻辑。
+`getCommand`函数调用的是`getGenericCommand()`并把参数客户端在服务器中的上下文结构体`client`作为参数传递给它。查找整个redis项目，`getGenericCommand()`只被`getCommand`和`getsetCommand`调用了，它应该是用来查找字符串`GET`和`GETSET`命令的公共逻辑。
 ```c
 int getGenericCommand(client *c) {
     robj *o;
