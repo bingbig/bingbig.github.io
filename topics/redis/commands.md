@@ -459,3 +459,166 @@ void getCommand(client *c) {
 }
 ```
 `c->argv[0]`是命令名（`get`），`c->argv[1]`是第一个参数，也就是key字符串。`lookupKeyReadOrReply()`函数是查询的核心。
+
+```c
+robj *lookupKeyReadOrReply(client *c, robj *key, robj *reply) {
+    robj *o = lookupKeyRead(c->db, key);
+    if (!o) addReply(c,reply);
+    return o;
+}
+```
+`lookupKeyReadOrReply()`调用`lookupKeyRead()`去查找key对应的值，如果没有查到，则向客户端发送预设好的回复（第三个参数），查到了就返回值对象。`lookupKeyRead()`继续调用`lookupKeyReadWithFlags()`并带入第三个参数`LOOKUP_NONE`标志这是一次普通的查找。
+
+```c
+/* Like lookupKeyReadWithFlags(), but does not use any flag, which is the
+ * common case. */
+robj *lookupKeyRead(redisDb *db, robj *key) {
+    return lookupKeyReadWithFlags(db,key,LOOKUP_NONE);
+}
+```
+
+`LOOKUP_NONE`表示没有特殊的标志，而`LOOKUP_NOTOUCH`表示不更新key的最近访问时间。
+
+```c
+/* Lookup a key for read operations, or return NULL if the key is not found
+ * in the specified DB.
+ *
+ * As a side effect of calling this function:
+ * 1. A key gets expired if it reached it's TTL.
+ * 2. The key last access time is updated.
+ * 3. The global keys hits/misses stats are updated (reported in INFO).
+ *
+ * This API should not be used when we write to the key after obtaining
+ * the object linked to the key, but only for read only operations.
+ *
+ * Flags change the behavior of this command:
+ *
+ *  LOOKUP_NONE (or zero): no special flags are passed.
+ *  LOOKUP_NOTOUCH: don't alter the last access time of the key.
+ *
+ * Note: this function also returns NULL if the key is logically expired
+ * but still existing, in case this is a slave, since this API is called only
+ * for read operations. Even if the key expiry is master-driven, we can
+ * correctly report a key is expired on slaves even if the master is lagging
+ * expiring our key via DELs in the replication link. */
+robj *lookupKeyReadWithFlags(redisDb *db, robj *key, int flags) {
+    robj *val;
+
+    if (expireIfNeeded(db,key) == 1) {
+        /* Key expired. If we are in the context of a master, expireIfNeeded()
+         * returns 0 only when the key does not exist at all, so it's safe
+         * to return NULL ASAP. */
+        if (server.masterhost == NULL) {
+            server.stat_keyspace_misses++;
+            return NULL;
+        }
+
+        /* However if we are in the context of a slave, expireIfNeeded() will
+         * not really try to expire the key, it only returns information
+         * about the "logical" status of the key: key expiring is up to the
+         * master in order to have a consistent view of master's data set.
+         *
+         * However, if the command caller is not the master, and as additional
+         * safety measure, the command invoked is a read-only command, we can
+         * safely return NULL here, and provide a more consistent behavior
+         * to clients accessign expired values in a read-only fashion, that
+         * will say the key as non existing.
+         *
+         * Notably this covers GETs when slaves are used to scale reads. */
+        if (server.current_client &&
+            server.current_client != server.master &&
+            server.current_client->cmd &&
+            server.current_client->cmd->flags & CMD_READONLY)
+        {
+            server.stat_keyspace_misses++;
+            return NULL;
+        }
+    }
+    val = lookupKey(db,key,flags);
+    if (val == NULL)
+        server.stat_keyspace_misses++;
+    else
+        server.stat_keyspace_hits++;
+    return val;
+}
+```
+如果这个key过期了：对于master来说，记录一下查询miss后直接返回；对于只读的slave来说，也仅仅是记一下miss后直接返回。`expireIfNeeded`函数不会真正的删除slave中的key，当master中的key过期了，这些过期的key会从数据库中驱逐，并引发在AOF/复制流中传播`DEL/UNLINK`命令来删除过期的key。我们再看看的实现`expireIfNeeded()`。
+```c
+/* This function is called when we are going to perform some operation
+ * in a given key, but such key may be already logically expired even if
+ * it still exists in the database. The main way this function is called
+ * is via lookupKey*() family of functions.
+ *
+ * The behavior of the function depends on the replication role of the
+ * instance, because slave instances do not expire keys, they wait
+ * for DELs from the master for consistency matters. However even
+ * slaves will try to have a coherent return value for the function,
+ * so that read commands executed in the slave side will be able to
+ * behave like if the key is expired even if still present (because the
+ * master has yet to propagate the DEL).
+ *
+ * In masters as a side effect of finding a key which is expired, such
+ * key will be evicted from the database. Also this may trigger the
+ * propagation of a DEL/UNLINK command in AOF / replication stream.
+ *
+ * The return value of the function is 0 if the key is still valid,
+ * otherwise the function returns 1 if the key is expired. */
+int expireIfNeeded(redisDb *db, robj *key) {
+    if (!keyIsExpired(db,key)) return 0;
+
+    /* If we are running in the context of a slave, instead of
+     * evicting the expired key from the database, we return ASAP:
+     * the slave key expiration is controlled by the master that will
+     * send us synthesized DEL operations for expired keys.
+     *
+     * Still we try to return the right information to the caller,
+     * that is, 0 if we think the key should be still valid, 1 if
+     * we think the key is expired at this time. */
+    if (server.masterhost != NULL) return 1;
+
+    /* Delete the key */
+    server.stat_expiredkeys++;
+    propagateExpire(db,key,server.lazyfree_lazy_expire);
+    notifyKeyspaceEvent(NOTIFY_EXPIRED,
+        "expired",key,db->id);
+    return server.lazyfree_lazy_expire ? dbAsyncDelete(db,key) :
+                                         dbSyncDelete(db,key);
+}
+```
+`expireIfNeeded()`首先判断key是否过期，如果过期了，对于master来说，传播这个过期命令，并且同步或者异步的方式删除过期的key。其中调用的`keyIsExpired()`函数通过比较数据库中`expires`字典中记录的key的过期时间和当前时间进行比较来判断是否过期（`dictFind(db->expires,key->ptr)`）。
+
+回到`lookupKeyReadWithFlags()`函数，如果该key没有过期，就调用`lookupKey()`函数去数据库的`dict`字典成员查找该key对应的键值对`dictEntry`。
+
+```c
+/* Low level key lookup API, not actually called directly from commands
+ * implementations that should instead rely on lookupKeyRead(),
+ * lookupKeyWrite() and lookupKeyReadWithFlags(). */
+robj *lookupKey(redisDb *db, robj *key, int flags) {
+    dictEntry *de = dictFind(db->dict,key->ptr);
+    if (de) {
+        robj *val = dictGetVal(de);
+
+        /* Update the access time for the ageing algorithm.
+         * Don't do it if we have a saving child, as this will trigger
+         * a copy on write madness. */
+        if (server.rdb_child_pid == -1 &&
+            server.aof_child_pid == -1 &&
+            !(flags & LOOKUP_NOTOUCH))
+        {
+            if (server.maxmemory_policy & MAXMEMORY_FLAG_LFU) {
+                updateLFU(val);
+            } else {
+                val->lru = LRU_CLOCK();
+            }
+        }
+        return val;
+    } else {
+        return NULL;
+    }
+}
+```
+`lookupKey()`函数如果找到了key对应的键值对，如果服务器没有在执行持久化操作，并且该操作没有标志是`LOOKUP_NOTOUCH`，则更新这个值的LFU或者LRU。
+
+最后`getGenericCommand()`函数拿到了key的查找结果，如果值对象是字符串对象，则调用`addReplyBulk()`回复客户端，否则回复`shared.wrongtypeerr`类型错误。
+
+
