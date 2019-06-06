@@ -621,4 +621,235 @@ robj *lookupKey(redisDb *db, robj *key, int flags) {
 
 最后`getGenericCommand()`函数拿到了key的查找结果，如果值对象是字符串对象，则调用`addReplyBulk()`回复客户端，否则回复`shared.wrongtypeerr`类型错误。
 
+### `set`
+`set`命令的格式如下
+```
+SET key value [NX] [XX] [EX <seconds>] [PX <milliseconds>]
+```
+命令参数解释如下【[参考](http://doc.redisfans.com/string/set.html)】：
+- EX second ：设置键的过期时间为 second 秒。 SET key value EX second 效果等同于 SETEX key second value 。
+- PX millisecond ：设置键的过期时间为 millisecond 毫秒。 SET key value PX millisecond 效果等同于 PSETEX key millisecond value 。
+- NX ：只在键不存在时，才对键进行设置操作。 SET key value NX 效果等同于 SETNX key value 。
+- XX ：只在键已经存在时，才对键进行设置操作。
+
+命令实现如下：
+```c
+void setCommand(client *c) {
+    int j;
+    robj *expire = NULL;
+    int unit = UNIT_SECONDS;
+    int flags = OBJ_SET_NO_FLAGS;
+
+    for (j = 3; j < c->argc; j++) {
+        char *a = c->argv[j]->ptr;
+        robj *next = (j == c->argc-1) ? NULL : c->argv[j+1];
+
+        if ((a[0] == 'n' || a[0] == 'N') &&
+            (a[1] == 'x' || a[1] == 'X') && a[2] == '\0' &&
+            !(flags & OBJ_SET_XX))
+        {
+            flags |= OBJ_SET_NX;
+        } else if ((a[0] == 'x' || a[0] == 'X') &&
+                   (a[1] == 'x' || a[1] == 'X') && a[2] == '\0' &&
+                   !(flags & OBJ_SET_NX))
+        {
+            flags |= OBJ_SET_XX;
+        } else if ((a[0] == 'e' || a[0] == 'E') &&
+                   (a[1] == 'x' || a[1] == 'X') && a[2] == '\0' &&
+                   !(flags & OBJ_SET_PX) && next)
+        {
+            flags |= OBJ_SET_EX;
+            unit = UNIT_SECONDS;
+            expire = next;
+            j++;
+        } else if ((a[0] == 'p' || a[0] == 'P') &&
+                   (a[1] == 'x' || a[1] == 'X') && a[2] == '\0' &&
+                   !(flags & OBJ_SET_EX) && next)
+        {
+            flags |= OBJ_SET_PX;
+            unit = UNIT_MILLISECONDS;
+            expire = next;
+            j++;
+        } else {
+            addReply(c,shared.syntaxerr);
+            return;
+        }
+    }
+
+    c->argv[2] = tryObjectEncoding(c->argv[2]);
+    setGenericCommand(c,flags,c->argv[1],c->argv[2],expire,unit,NULL,NULL);
+}
+```
+Redis首先判断用户是否输入了`NX`或者`XX`，并设置相应的flag。并且判断是否设置了`px`或者`ex`以定义过期时间。在保存键值对前先对值进行对象编码，前面提到了，redis将用户输入的所有参数都保存成字符串对象。`tryObjectEncoding()`函数对值重新进行编码。重新编码的目的是为了节省空间。
+```c
+/* Try to encode a string object in order to save space */
+robj *tryObjectEncoding(robj *o) {
+    long value;
+    sds s = o->ptr;
+    size_t len;
+
+    /* Make sure this is a string object, the only type we encode
+     * in this function. Other types use encoded memory efficient
+     * representations but are handled by the commands implementing
+     * the type. */
+    /**
+     * 只对字符串对象进行编码
+     * */
+    serverAssertWithInfo(NULL,o,o->type == OBJ_STRING);
+
+    /* We try some specialized encoding only for objects that are
+     * RAW or EMBSTR encoded, in other words objects that are still
+     * in represented by an actually array of chars. */
+    /**
+     * 只对 encoding为RAW 或者 EMBSTR的对象编码
+     * */
+    if (!sdsEncodedObject(o)) return o;
+
+    /* It's not safe to encode shared objects: shared objects can be shared
+     * everywhere in the "object space" of Redis and may end in places where
+     * they are not handled. We handle them only as values in the keyspace. */
+     /**
+      * 已经被引用的对象不再编码
+      * */
+     if (o->refcount > 1) return o;
+
+    /* Check if we can represent this string as a long integer.
+     * Note that we are sure that a string larger than 20 chars is not
+     * representable as a 32 nor 64 bit integer. */
+    len = sdslen(s);
+    /*
+     * string2l将字符串转换成长整形，目的是为了共享整数类型的对象，以节省空间
+     **/
+    if (len <= 20 && string2l(s,len,&value)) {
+        /* This object is encodable as a long. Try to use a shared object.
+         * Note that we avoid using shared integers when maxmemory is used
+         * because every object needs to have a private LRU field for the LRU
+         * algorithm to work well. */
+        if ((server.maxmemory == 0 ||
+            !(server.maxmemory_policy & MAXMEMORY_FLAG_NO_SHARED_INTEGERS)) &&
+            value >= 0 &&
+            value < OBJ_SHARED_INTEGERS)
+        {
+            decrRefCount(o); /* 减少o的引用次数，如果引用次数为0，则对象被回收 */
+            incrRefCount(shared.integers[value]); /* 对共享对象增加引用，实际上没有任何操作 */
+            return shared.integers[value];
+        } else {
+            if (o->encoding == OBJ_ENCODING_RAW) sdsfree(o->ptr);
+            o->encoding = OBJ_ENCODING_INT;
+            o->ptr = (void*) value;
+            return o;
+        }
+    }
+
+    /* If the string is small and is still RAW encoded,
+     * try the EMBSTR encoding which is more efficient.
+     * In this representation the object and the SDS string are allocated
+     * in the same chunk of memory to save space and cache misses. */
+    if (len <= OBJ_ENCODING_EMBSTR_SIZE_LIMIT) {
+        robj *emb;
+
+        if (o->encoding == OBJ_ENCODING_EMBSTR) return o;
+        emb = createEmbeddedStringObject(s,sdslen(s));
+        decrRefCount(o);
+        return emb;
+    }
+
+    /* We can't encode the object...
+     *
+     * Do the last try, and at least optimize the SDS string inside
+     * the string object to require little space, in case there
+     * is more than 10% of free space at the end of the SDS string.
+     *
+     * We do that only for relatively large strings as this branch
+     * is only entered if the length of the string is greater than
+     * OBJ_ENCODING_EMBSTR_SIZE_LIMIT. */
+    trimStringObjectIfNeeded(o);
+
+    /* Return the original object. */
+    return o;
+}
+```
+
+最后调用`setGenericCommand()`将编码后的键值对对象保存到数据库中。
+#### string2ll
+我们再来看看Redis是怎么把字符串解析成long long的。
+```c
+/* Convert a string into a long long. Returns 1 if the string could be parsed
+ * into a (non-overflowing) long long, 0 otherwise. The value will be set to
+ * the parsed value when appropriate.
+ *
+ * Note that this function demands that the string strictly represents
+ * a long long: no spaces or other characters before or after the string
+ * representing the number are accepted, nor zeroes at the start if not
+ * for the string "0" representing the zero number.
+ *
+ * Because of its strictness, it is safe to use this function to check if
+ * you can convert a string into a long long, and obtain back the string
+ * from the number without any loss in the string representation. */
+int string2ll(const char *s, size_t slen, long long *value) {
+    const char *p = s;
+    size_t plen = 0;
+    int negative = 0;
+    unsigned long long v;
+
+    /* A zero length string is not a valid number. */
+    if (plen == slen)
+        return 0;
+
+    /* Special case: first and only digit is 0. */
+    if (slen == 1 && p[0] == '0') {
+        if (value != NULL) *value = 0;
+        return 1;
+    }
+
+    /* Handle negative numbers: just set a flag and continue like if it
+     * was a positive number. Later convert into negative. */
+    if (p[0] == '-') {
+        negative = 1;
+        p++; plen++;
+
+        /* Abort on only a negative sign. */
+        if (plen == slen)
+            return 0;
+    }
+
+    /* First digit should be 1-9, otherwise the string should just be 0. */
+    if (p[0] >= '1' && p[0] <= '9') {
+        v = p[0]-'0';
+        p++; plen++;
+    } else {
+        return 0;
+    }
+
+    /* Parse all the other digits, checking for overflow at every step. */
+    while (plen < slen && p[0] >= '0' && p[0] <= '9') {
+        if (v > (ULLONG_MAX / 10)) /* Overflow. */
+            return 0;
+        v *= 10;
+
+        if (v > (ULLONG_MAX - (p[0]-'0'))) /* Overflow. */
+            return 0;
+        v += p[0]-'0';
+
+        p++; plen++;
+    }
+
+    /* Return if not all bytes were used. */
+    if (plen < slen)
+        return 0;
+
+    /* Convert to negative if needed, and do the final overflow check when
+     * converting from unsigned long long to long long. */
+    if (negative) {
+        if (v > ((unsigned long long)(-(LLONG_MIN+1))+1)) /* Overflow. */
+            return 0;
+        if (value != NULL) *value = -v;
+    } else {
+        if (v > LLONG_MAX) /* Overflow. */
+            return 0;
+        if (value != NULL) *value = v;
+    }
+    return 1;
+}
+```
 
