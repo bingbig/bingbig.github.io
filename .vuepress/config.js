@@ -40,18 +40,6 @@ module.exports = {
                         link: '/algorithms/content'
                     },
                     {
-                        text: 'Linux',
-                        link: '/Linux/content'
-                    },
-                    {
-                        text: 'Docker',
-                        link: '/docker/content'
-                    },
-                    {
-                        text: '操作系统',
-                        link: '/OS/content'
-                    },
-                    {
                         text: '数据库',
                         link: '/Database/content'
                     },

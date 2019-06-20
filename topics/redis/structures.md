@@ -1310,7 +1310,26 @@ redis使用`refcount`来实现内存的回收机制。通过跟踪对象的引�
 #define OBJ_ENCODING_STREAM 10 /* Encoded as a radix tree of listpacks */
 ```
 
+每种类型的对象都至少使用了两种不同的编码，如下表所示：
+
+| 类型         | 编码                      | 对象                                           |
+| ------------ | ------------------------- | ---------------------------------------------- |
+| REDIS_STRING | REDIS_ENCODING_INT        | 使用整数值实现的字符串对象                     |
+| REDIS_STRING | REDIS_ENCODING_EMBSTR     | 使用embstr编码的简单动态字符串实现的字符串对象 |
+| REDIS_STRING | REDIS_ENCODING_RAW        | 使用简单动态字符串实现的字符串对象             |
+| REDIS_LIST   | REDIS_ENCODING_ZIPLIST    | 使用压缩列表实现的列表对象                     |
+| REDIS_LIST   | REDIS_ENCODING_LINKEDLIST | 使用双端链表实现的列表对象                     |
+| REDIS_HASH   | REDIS_ENCODING_ZIPLIST    | 使用压缩列表实现的哈希对象                     |
+| REDIS_HASH   | REDIS_ENCODING_HT         | 使用字典实现的哈希对象                         |
+| REDIS_SET    | REDIS_ENCODING_INTSET     | 使用整数集合实现的集合对象                     |
+| REDIS_SET    | REDIS_ENCODING_HT         | 使用字典实现的集合对象                         |
+| REDIS_ZSET   | REDIS_ENCODING_ZIPLIST    | 使用压缩列表实现的有序集合对象                 |
+| REDIS_ZSET   | REDIS_ENCODING_SKIPLIST   | 使用跳跃表和字典实现的有序集合对象             |
+
+
+
 ### 创建对象
+
 Redis封装了多种对象创建的方法，基本的创建方法如`createObject()`。
 ```c
 robj *createObject(int type, void *ptr) {

@@ -5,7 +5,7 @@ sidebar: auto
 # Redis命令
 在本文，我们将阅读Redis源码以了解Redis如何执行来自客户端命令的。
 
-在redis的启动过程中，会监听redis服务器配置文件指定的地址和端口，并且初始化一组TCP socket文件描述符，这些监听描述符保存在全局变量`server`的`ipfd`成员中（该成员是一个16个元素的数组），其数量由`server.ipfd_count`记录。来自unix域socket连接描述符记录在`server.sofd`，我们暂时只讨论TCP连接。
+在Redis的启动过程中，会监听Redis服务器配置文件指定的地址和端口，并且初始化一组TCP socket文件描述符，这些监听描述符保存在全局变量`server`的`ipfd`成员中（该成员是一个16个元素的数组），其数量由`server.ipfd_count`记录。来自unix域socket连接描述符记录在`server.sofd`，我们暂时只讨论TCP连接。
 
 ## 监听端口
 ```c
@@ -16,7 +16,7 @@ if (server.port != 0 &&
 ```
 
 ## 连接应答处理器
-在初始化监听描述符之后，redis为这些描述符的可读事件绑定了[连接应答处理器](./event_driven_library.html#_1-reactor)。
+在初始化监听描述符之后，Redis为这些描述符的可读事件绑定了[连接应答处理器](./event_driven_library.html#_1-reactor)。
 
 ```c
 /* Create an event handler for accepting new connections in TCP and Unix
@@ -27,7 +27,7 @@ for (j = 0; j < server.ipfd_count; j++) {
     }
 }
 ```
-当一个或者多个客户端和服务器之间TCP连接建立后，会触发相应监听描述符的可读事件的发生，redis服务器的事件驱动模型会很快执行描述符绑定的处理器`acceptTcpHandler`。
+当一个或者多个客户端和服务器之间TCP连接建立后，会触发相应监听描述符的可读事件的发生，Redis服务器的事件驱动模型会很快执行描述符绑定的处理器`acceptTcpHandler`。
 
 ```c
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
@@ -70,7 +70,7 @@ acceptTcpHandler
             linkClient
                 listAddNodeTail
 ```
-到这里，我们找到了redis服务器读取客户端命令的关键函数`readQueryFromClient()`。该函数从发生可读事件的已连接描述符中读取最大`PROTO_IOBUF_LEN`长度的数据并追加到在`c->querybuf`缓冲区后面，随后调用`processInputBufferAndReplicate()`函数处理缓冲区。
+到这里，我们找到了Redis服务器读取客户端命令的关键函数`readQueryFromClient()`。该函数从发生可读事件的已连接描述符中读取最大`PROTO_IOBUF_LEN`长度的数据并追加到在`c->querybuf`缓冲区后面，随后调用`processInputBufferAndReplicate()`函数处理缓冲区。
 ```c
 /* This is a wrapper for processInputBuffer that also cares about handling
  * the replication forwarding to the sub-slaves, in case the client 'c'
@@ -112,7 +112,7 @@ if (c->reqtype == PROTO_REQ_INLINE) {
 }
 ```
 
-如果客户端发来的数据的第一个字符是`*`（或者下一次解析的第一个字符是`*`）时，那么数据将被当做`multibulk`处理，否则将被当做`inline`处理。`Inline`的具体解析函数是`processInlineBuffer()`，`multibulk`的具体解析函数是`processMultibulkBuffer()`。 当客户端传送的数据已经解析出命令字段和参数字段，字段数组保存在`client->argv`（各个字段已经被转换成redis字符串对象`createObject(OBJ_STRING,argv[j])`），字段个数保存在`client->argc`。接下来进行命令处理，函数是`processCommand()`。
+如果客户端发来的数据的第一个字符是`*`（或者下一次解析的第一个字符是`*`）时，那么数据将被当做`multibulk`处理，否则将被当做`inline`处理。`Inline`的具体解析函数是`processInlineBuffer()`，`multibulk`的具体解析函数是`processMultibulkBuffer()`。 当客户端传送的数据已经解析出命令字段和参数字段，字段数组保存在`client->argv`（各个字段已经被转换成Redis字符串对象`createObject(OBJ_STRING,argv[j])`），字段个数保存在`client->argc`。接下来进行命令处理，函数是`processCommand()`。
 
 ## 处理命令
 `processCommand()`函数体很长，我们来一步步分解。
@@ -131,7 +131,7 @@ if (!strcasecmp(c->argv[0]->ptr,"quit")) {
 `quit`命令比较特殊，一般的命令会走完复制过程，但是当启用了`FORCE_REPLICATION`时，`quit`命令会引起问题。
 
 ### 查询命令表
-`lookupCommand()`函数从字典`server.commands`中查找和第一个参数`c->argv[0]->ptr`一直的命令。
+`lookupCommand()`函数从字典`server.commands`中查找和第一个参数`c->argv[0]->ptr`一致的命令。
 
 ```c{3}
 /* Now lookup the command and check ASAP about trivial error conditions
@@ -160,7 +160,7 @@ if (!c->cmd) {
 ```c
 /* Command table -- we initiialize it here as it is part of the
  * initial configuration, since command names may be changed via
- * redis.conf using the rename-command directive. */
+ * Redis.conf using the rename-command directive. */
 server.commands = dictCreate(&commandTableDictType,NULL);
 server.orig_commands = dictCreate(&commandTableDictType,NULL);
 populateCommandTable();
@@ -178,7 +178,7 @@ server.pexpireCommand = lookupCommandByCString("pexpire");
 server.xclaimCommand = lookupCommandByCString("xclaim");
 server.xgroupCommand = lookupCommandByCString("xgroup");
 ```
-其中`populateCommandTable()`函数将写死的命令列表经过一些处理后保存到`server.commands`和`server.orig_commands`中。下面我们列出部分命令列表中的命令来看：数组的每个元素都是`redisCommand`类型的结构体，其成员分别表示`命令名`，`命令函数`，`参数个数`(-N表示 >=N)，`sflag`(字符串表示的命令标志)，`flag`(位掩码表示的命令标志),`获取key的函数`，`第一个key的索引`，`最后一个key的索引`，`key和key之间的步长`,`微秒数`(由redis计算得到)，`调用次数`。
+其中`populateCommandTable()`函数将写死的命令列表经过一些处理后保存到`server.commands`和`server.orig_commands`中。下面我们列出部分命令列表中的命令来看：数组的每个元素都是`redisCommand`类型的结构体，其成员分别表示`命令名`，`命令函数`，`参数个数`(-N表示 >=N)，`sflag`(字符串表示的命令标志)，`flag`(位掩码表示的命令标志),`获取key的函数`，`第一个key的索引`，`最后一个key的索引`，`key和key之间的步长`,`微秒数`(由Redis计算得到)，`调用次数`。
 
 在下面的代码中我们可以看到字符串表示的命令标志如`rF`，`wm`, `wRF`等等分别是什么意思呢？
 
@@ -189,6 +189,58 @@ server.xgroupCommand = lookupCommandByCString("xgroup");
 - 等等
 
 ```c
+/* Our command table.
+ *
+ * Every entry is composed of the following fields:
+ *
+ * name: a string representing the command name.
+ * function: pointer to the C function implementing the command.
+ * arity: number of arguments, it is possible to use -N to say >= N
+ * sflags: command flags as string. See below for a table of flags.
+ * flags: flags as bitmask. Computed by Redis using the 'sflags' field.
+ * get_keys_proc: an optional function to get key arguments from a command.
+ *                This is only used when the following three fields are not
+ *                enough to specify what arguments are keys.
+ * first_key_index: first argument that is a key
+ * last_key_index: last argument that is a key
+ * key_step: step to get all the keys from first to last argument. For instance
+ *           in MSET the step is two since arguments are key,val,key,val,...
+ * microseconds: microseconds of total execution time for this command.
+ * calls: total number of calls of this command.
+ *
+ * The flags, microseconds and calls fields are computed by Redis and should
+ * always be set to zero.
+ *
+ * Command flags are expressed using strings where every character represents
+ * a flag. Later the populateCommandTable() function will take care of
+ * populating the real 'flags' field using this characters.
+ *
+ * This is the meaning of the flags:
+ *
+ * w: write command (may modify the key space).
+ * r: read command  (will never modify the key space).
+ * m: may increase memory usage once called. Don't allow if out of memory.
+ * a: admin command, like SAVE or SHUTDOWN.
+ * p: Pub/Sub related command.
+ * f: force replication of this command, regardless of server.dirty.
+ * s: command not allowed in scripts.
+ * R: random command. Command is not deterministic, that is, the same command
+ *    with the same arguments, with the same key space, may have different
+ *    results. For instance SPOP and RANDOMKEY are two random commands.
+ * S: Sort command output array if called from script, so that the output
+ *    is deterministic.
+ * l: Allow command while loading the database.
+ * t: Allow command while a slave has stale data but is not allowed to
+ *    server this data. Normally no command is accepted in this condition
+ *    but just a few.
+ * M: Do not automatically propagate the command on MONITOR.
+ * k: Perform an implicit ASKING for this command, so the command will be
+ *    accepted in cluster mode if the slot is marked as 'importing'.
+ * F: Fast command: O(1) or O(log(N)) command that should never delay
+ *    its execution as long as the kernel scheduler is giving us time.
+ *    Note that commands that may trigger a DEL as a side effect (like SET)
+ *    are not fast commands.
+ */
 struct redisCommand redisCommandTable[] = {
     {"module",moduleCommand,-2,"as",0,NULL,0,0,0,0,0},
     {"get",getCommand,2,"rF",0,NULL,1,1,1,0,0},
@@ -200,7 +252,186 @@ struct redisCommand redisCommandTable[] = {
     {"strlen",strlenCommand,2,"rF",0,NULL,1,1,1,0,0},
     {"del",delCommand,-2,"w",0,NULL,1,-1,1,0,0},
     {"unlink",unlinkCommand,-2,"wF",0,NULL,1,-1,1,0,0},
-    // ...
+    {"exists",existsCommand,-2,"rF",0,NULL,1,-1,1,0,0},
+    {"setbit",setbitCommand,4,"wm",0,NULL,1,1,1,0,0},
+    {"getbit",getbitCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"bitfield",bitfieldCommand,-2,"wm",0,NULL,1,1,1,0,0},
+    {"setrange",setrangeCommand,4,"wm",0,NULL,1,1,1,0,0},
+    {"getrange",getrangeCommand,4,"r",0,NULL,1,1,1,0,0},
+    {"substr",getrangeCommand,4,"r",0,NULL,1,1,1,0,0},
+    {"incr",incrCommand,2,"wmF",0,NULL,1,1,1,0,0},
+    {"decr",decrCommand,2,"wmF",0,NULL,1,1,1,0,0},
+    {"mget",mgetCommand,-2,"rF",0,NULL,1,-1,1,0,0},
+    {"rpush",rpushCommand,-3,"wmF",0,NULL,1,1,1,0,0},
+    {"lpush",lpushCommand,-3,"wmF",0,NULL,1,1,1,0,0},
+    {"rpushx",rpushxCommand,-3,"wmF",0,NULL,1,1,1,0,0},
+    {"lpushx",lpushxCommand,-3,"wmF",0,NULL,1,1,1,0,0},
+    {"linsert",linsertCommand,5,"wm",0,NULL,1,1,1,0,0},
+    {"rpop",rpopCommand,2,"wF",0,NULL,1,1,1,0,0},
+    {"lpop",lpopCommand,2,"wF",0,NULL,1,1,1,0,0},
+    {"brpop",brpopCommand,-3,"ws",0,NULL,1,-2,1,0,0},
+    {"brpoplpush",brpoplpushCommand,4,"wms",0,NULL,1,2,1,0,0},
+    {"blpop",blpopCommand,-3,"ws",0,NULL,1,-2,1,0,0},
+    {"llen",llenCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"lindex",lindexCommand,3,"r",0,NULL,1,1,1,0,0},
+    {"lset",lsetCommand,4,"wm",0,NULL,1,1,1,0,0},
+    {"lrange",lrangeCommand,4,"r",0,NULL,1,1,1,0,0},
+    {"ltrim",ltrimCommand,4,"w",0,NULL,1,1,1,0,0},
+    {"lrem",lremCommand,4,"w",0,NULL,1,1,1,0,0},
+    {"rpoplpush",rpoplpushCommand,3,"wm",0,NULL,1,2,1,0,0},
+    {"sadd",saddCommand,-3,"wmF",0,NULL,1,1,1,0,0},
+    {"srem",sremCommand,-3,"wF",0,NULL,1,1,1,0,0},
+    {"smove",smoveCommand,4,"wF",0,NULL,1,2,1,0,0},
+    {"sismember",sismemberCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"scard",scardCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"spop",spopCommand,-2,"wRF",0,NULL,1,1,1,0,0},
+    {"srandmember",srandmemberCommand,-2,"rR",0,NULL,1,1,1,0,0},
+    {"sinter",sinterCommand,-2,"rS",0,NULL,1,-1,1,0,0},
+    {"sinterstore",sinterstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
+    {"sunion",sunionCommand,-2,"rS",0,NULL,1,-1,1,0,0},
+    {"sunionstore",sunionstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
+    {"sdiff",sdiffCommand,-2,"rS",0,NULL,1,-1,1,0,0},
+    {"sdiffstore",sdiffstoreCommand,-3,"wm",0,NULL,1,-1,1,0,0},
+    {"smembers",sinterCommand,2,"rS",0,NULL,1,1,1,0,0},
+    {"sscan",sscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
+    {"zadd",zaddCommand,-4,"wmF",0,NULL,1,1,1,0,0},
+    {"zincrby",zincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"zrem",zremCommand,-3,"wF",0,NULL,1,1,1,0,0},
+    {"zremrangebyscore",zremrangebyscoreCommand,4,"w",0,NULL,1,1,1,0,0},
+    {"zremrangebyrank",zremrangebyrankCommand,4,"w",0,NULL,1,1,1,0,0},
+    {"zremrangebylex",zremrangebylexCommand,4,"w",0,NULL,1,1,1,0,0},
+    {"zunionstore",zunionstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
+    {"zinterstore",zinterstoreCommand,-4,"wm",0,zunionInterGetKeys,0,0,0,0,0},
+    {"zrange",zrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zrangebyscore",zrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zrevrangebyscore",zrevrangebyscoreCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zrangebylex",zrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zrevrangebylex",zrevrangebylexCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zcount",zcountCommand,4,"rF",0,NULL,1,1,1,0,0},
+    {"zlexcount",zlexcountCommand,4,"rF",0,NULL,1,1,1,0,0},
+    {"zrevrange",zrevrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"zcard",zcardCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"zscore",zscoreCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"zrank",zrankCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"zrevrank",zrevrankCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"zscan",zscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
+    {"zpopmin",zpopminCommand,-2,"wF",0,NULL,1,1,1,0,0},
+    {"zpopmax",zpopmaxCommand,-2,"wF",0,NULL,1,1,1,0,0},
+    {"bzpopmin",bzpopminCommand,-3,"wsF",0,NULL,1,-2,1,0,0},
+    {"bzpopmax",bzpopmaxCommand,-3,"wsF",0,NULL,1,-2,1,0,0},
+    {"hset",hsetCommand,-4,"wmF",0,NULL,1,1,1,0,0},
+    {"hsetnx",hsetnxCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"hget",hgetCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"hmset",hsetCommand,-4,"wmF",0,NULL,1,1,1,0,0},
+    {"hmget",hmgetCommand,-3,"rF",0,NULL,1,1,1,0,0},
+    {"hincrby",hincrbyCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"hincrbyfloat",hincrbyfloatCommand,4,"wmF",0,NULL,1,1,1,0,0},
+    {"hdel",hdelCommand,-3,"wF",0,NULL,1,1,1,0,0},
+    {"hlen",hlenCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"hstrlen",hstrlenCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"hkeys",hkeysCommand,2,"rS",0,NULL,1,1,1,0,0},
+    {"hvals",hvalsCommand,2,"rS",0,NULL,1,1,1,0,0},
+    {"hgetall",hgetallCommand,2,"rR",0,NULL,1,1,1,0,0},
+    {"hexists",hexistsCommand,3,"rF",0,NULL,1,1,1,0,0},
+    {"hscan",hscanCommand,-3,"rR",0,NULL,1,1,1,0,0},
+    {"incrby",incrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
+    {"decrby",decrbyCommand,3,"wmF",0,NULL,1,1,1,0,0},
+    {"incrbyfloat",incrbyfloatCommand,3,"wmF",0,NULL,1,1,1,0,0},
+    {"getset",getsetCommand,3,"wm",0,NULL,1,1,1,0,0},
+    {"mset",msetCommand,-3,"wm",0,NULL,1,-1,2,0,0},
+    {"msetnx",msetnxCommand,-3,"wm",0,NULL,1,-1,2,0,0},
+    {"randomkey",randomkeyCommand,1,"rR",0,NULL,0,0,0,0,0},
+    {"select",selectCommand,2,"lF",0,NULL,0,0,0,0,0},
+    {"swapdb",swapdbCommand,3,"wF",0,NULL,0,0,0,0,0},
+    {"move",moveCommand,3,"wF",0,NULL,1,1,1,0,0},
+    {"rename",renameCommand,3,"w",0,NULL,1,2,1,0,0},
+    {"renamenx",renamenxCommand,3,"wF",0,NULL,1,2,1,0,0},
+    {"expire",expireCommand,3,"wF",0,NULL,1,1,1,0,0},
+    {"expireat",expireatCommand,3,"wF",0,NULL,1,1,1,0,0},
+    {"pexpire",pexpireCommand,3,"wF",0,NULL,1,1,1,0,0},
+    {"pexpireat",pexpireatCommand,3,"wF",0,NULL,1,1,1,0,0},
+    {"keys",keysCommand,2,"rS",0,NULL,0,0,0,0,0},
+    {"scan",scanCommand,-2,"rR",0,NULL,0,0,0,0,0},
+    {"dbsize",dbsizeCommand,1,"rF",0,NULL,0,0,0,0,0},
+    {"auth",authCommand,2,"sltF",0,NULL,0,0,0,0,0},
+    {"ping",pingCommand,-1,"tF",0,NULL,0,0,0,0,0},
+    {"echo",echoCommand,2,"F",0,NULL,0,0,0,0,0},
+    {"save",saveCommand,1,"as",0,NULL,0,0,0,0,0},
+    {"bgsave",bgsaveCommand,-1,"as",0,NULL,0,0,0,0,0},
+    {"bgrewriteaof",bgrewriteaofCommand,1,"as",0,NULL,0,0,0,0,0},
+    {"shutdown",shutdownCommand,-1,"aslt",0,NULL,0,0,0,0,0},
+    {"lastsave",lastsaveCommand,1,"RF",0,NULL,0,0,0,0,0},
+    {"type",typeCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"multi",multiCommand,1,"sF",0,NULL,0,0,0,0,0},
+    {"exec",execCommand,1,"sM",0,NULL,0,0,0,0,0},
+    {"discard",discardCommand,1,"sF",0,NULL,0,0,0,0,0},
+    {"sync",syncCommand,1,"ars",0,NULL,0,0,0,0,0},
+    {"psync",syncCommand,3,"ars",0,NULL,0,0,0,0,0},
+    {"replconf",replconfCommand,-1,"aslt",0,NULL,0,0,0,0,0},
+    {"flushdb",flushdbCommand,-1,"w",0,NULL,0,0,0,0,0},
+    {"flushall",flushallCommand,-1,"w",0,NULL,0,0,0,0,0},
+    {"sort",sortCommand,-2,"wm",0,sortGetKeys,1,1,1,0,0},
+    {"info",infoCommand,-1,"ltR",0,NULL,0,0,0,0,0},
+    {"monitor",monitorCommand,1,"as",0,NULL,0,0,0,0,0},
+    {"ttl",ttlCommand,2,"rFR",0,NULL,1,1,1,0,0},
+    {"touch",touchCommand,-2,"rF",0,NULL,1,1,1,0,0},
+    {"pttl",pttlCommand,2,"rFR",0,NULL,1,1,1,0,0},
+    {"persist",persistCommand,2,"wF",0,NULL,1,1,1,0,0},
+    {"slaveof",replicaofCommand,3,"ast",0,NULL,0,0,0,0,0},
+    {"replicaof",replicaofCommand,3,"ast",0,NULL,0,0,0,0,0},
+    {"role",roleCommand,1,"lst",0,NULL,0,0,0,0,0},
+    {"debug",debugCommand,-2,"as",0,NULL,0,0,0,0,0},
+    {"config",configCommand,-2,"last",0,NULL,0,0,0,0,0},
+    {"subscribe",subscribeCommand,-2,"pslt",0,NULL,0,0,0,0,0},
+    {"unsubscribe",unsubscribeCommand,-1,"pslt",0,NULL,0,0,0,0,0},
+    {"psubscribe",psubscribeCommand,-2,"pslt",0,NULL,0,0,0,0,0},
+    {"punsubscribe",punsubscribeCommand,-1,"pslt",0,NULL,0,0,0,0,0},
+    {"publish",publishCommand,3,"pltF",0,NULL,0,0,0,0,0},
+    {"pubsub",pubsubCommand,-2,"pltR",0,NULL,0,0,0,0,0},
+    {"watch",watchCommand,-2,"sF",0,NULL,1,-1,1,0,0},
+    {"unwatch",unwatchCommand,1,"sF",0,NULL,0,0,0,0,0},
+    {"cluster",clusterCommand,-2,"a",0,NULL,0,0,0,0,0},
+    {"restore",restoreCommand,-4,"wm",0,NULL,1,1,1,0,0},
+    {"restore-asking",restoreCommand,-4,"wmk",0,NULL,1,1,1,0,0},
+    {"migrate",migrateCommand,-6,"wR",0,migrateGetKeys,0,0,0,0,0},
+    {"asking",askingCommand,1,"F",0,NULL,0,0,0,0,0},
+    {"readonly",readonlyCommand,1,"F",0,NULL,0,0,0,0,0},
+    {"readwrite",readwriteCommand,1,"F",0,NULL,0,0,0,0,0},
+    {"dump",dumpCommand,2,"rR",0,NULL,1,1,1,0,0},
+    {"object",objectCommand,-2,"rR",0,NULL,2,2,1,0,0},
+    {"memory",memoryCommand,-2,"rR",0,NULL,0,0,0,0,0},
+    {"client",clientCommand,-2,"as",0,NULL,0,0,0,0,0},
+    {"eval",evalCommand,-3,"s",0,evalGetKeys,0,0,0,0,0},
+    {"evalsha",evalShaCommand,-3,"s",0,evalGetKeys,0,0,0,0,0},
+    {"slowlog",slowlogCommand,-2,"aR",0,NULL,0,0,0,0,0},
+    {"script",scriptCommand,-2,"s",0,NULL,0,0,0,0,0},
+    {"time",timeCommand,1,"RF",0,NULL,0,0,0,0,0},
+    {"bitop",bitopCommand,-4,"wm",0,NULL,2,-1,1,0,0},
+    {"bitcount",bitcountCommand,-2,"r",0,NULL,1,1,1,0,0},
+    {"bitpos",bitposCommand,-3,"r",0,NULL,1,1,1,0,0},
+    {"wait",waitCommand,3,"s",0,NULL,0,0,0,0,0},
+    {"command",commandCommand,0,"ltR",0,NULL,0,0,0,0,0},
+    {"geoadd",geoaddCommand,-5,"wm",0,NULL,1,1,1,0,0},
+    {"georadius",georadiusCommand,-6,"w",0,georadiusGetKeys,1,1,1,0,0},
+    {"georadius_ro",georadiusroCommand,-6,"r",0,georadiusGetKeys,1,1,1,0,0},
+    {"georadiusbymember",georadiusbymemberCommand,-5,"w",0,georadiusGetKeys,1,1,1,0,0},
+    {"georadiusbymember_ro",georadiusbymemberroCommand,-5,"r",0,georadiusGetKeys,1,1,1,0,0},
+    {"geohash",geohashCommand,-2,"r",0,NULL,1,1,1,0,0},
+    {"geopos",geoposCommand,-2,"r",0,NULL,1,1,1,0,0},
+    {"geodist",geodistCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"pfselftest",pfselftestCommand,1,"a",0,NULL,0,0,0,0,0},
+    {"pfadd",pfaddCommand,-2,"wmF",0,NULL,1,1,1,0,0},
+    {"pfcount",pfcountCommand,-2,"r",0,NULL,1,-1,1,0,0},
+    {"pfmerge",pfmergeCommand,-2,"wm",0,NULL,1,-1,1,0,0},
+    {"pfdebug",pfdebugCommand,-3,"w",0,NULL,0,0,0,0,0},
+    {"xadd",xaddCommand,-5,"wmFR",0,NULL,1,1,1,0,0},
+    {"xrange",xrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"xrevrange",xrevrangeCommand,-4,"r",0,NULL,1,1,1,0,0},
+    {"xlen",xlenCommand,2,"rF",0,NULL,1,1,1,0,0},
+    {"xread",xreadCommand,-4,"rs",0,xreadGetKeys,1,1,1,0,0},
+    {"xreadgroup",xreadCommand,-7,"ws",0,xreadGetKeys,1,1,1,0,0},
+    {"xgroup",xgroupCommand,-2,"wm",0,NULL,2,2,1,0,0},
+    {"xsetid",xsetidCommand,3,"wmF",0,NULL,1,1,1,0,0},
     {"xack",xackCommand,-4,"wF",0,NULL,1,1,1,0,0},
     {"xpending",xpendingCommand,-3,"rR",0,NULL,1,1,1,0,0},
     {"xclaim",xclaimCommand,-6,"wRF",0,NULL,1,1,1,0,0},
@@ -213,7 +444,7 @@ struct redisCommand redisCommandTable[] = {
     {"lolwut",lolwutCommand,-1,"r",0,NULL,0,0,0,0,0}
 };
 ```
-函数`populateCommandTable()`初始化命令表时，会以命令名为key, `redisCommand`结构体为值保存到`server.commands`和`server.orig_commands`中。
+函数`populateCommandTable()`初始化命令表时，会以命令名为key, `RedisCommand`结构体为值保存到`server.commands`和`server.orig_commands`中。
 
 在查询命令表时，如果没有找到命令或者`client->argc`的参数的数目和命令表中设定的命令需要的参数数不一致时，会向客户发发送错误信息。
 
@@ -304,7 +535,7 @@ if (deny_write_type != DISK_ERROR_TYPE_NONE &&
 }
 ```
 
-### 从库数目不够时禁写命令
+### 可用从库数目不够时禁写命令
 ```c
 /* Don't accept write commands if there are not enough good slaves and
     * user configured the min-slaves-to-write option. */
@@ -437,7 +668,7 @@ void queueMultiCommand(client *c) {
 ### `get`
 `get`命令的实现函数是`getCommand`。返回key所关联的字符串值。如果key不存在那么返回特殊值 `nil` 。假如key储存的值不是字符串类型，返回一个错误，因为`GET`只能用于处理字符串值。
 
-`getCommand`函数调用的是`getGenericCommand()`并把参数客户端在服务器中的上下文结构体`client`作为参数传递给它。查找整个redis项目，`getGenericCommand()`只被`getCommand`和`getsetCommand`调用了，它应该是用来查找字符串`GET`和`GETSET`命令的公共逻辑。
+`getCommand`函数调用的是`getGenericCommand()`并把参数客户端在服务器中的上下文结构体`client`作为参数传递给它。查找整个Redis项目，`getGenericCommand()`只被`getCommand`和`getsetCommand`调用了，它应该是用来查找字符串`GET`和`GETSET`命令的公共逻辑。
 ```c
 int getGenericCommand(client *c) {
     robj *o;
@@ -472,7 +703,7 @@ robj *lookupKeyReadOrReply(client *c, robj *key, robj *reply) {
 ```c
 /* Like lookupKeyReadWithFlags(), but does not use any flag, which is the
  * common case. */
-robj *lookupKeyRead(redisDb *db, robj *key) {
+robj *lookupKeyRead(RedisDb *db, robj *key) {
     return lookupKeyReadWithFlags(db,key,LOOKUP_NONE);
 }
 ```
@@ -621,12 +852,104 @@ robj *lookupKey(redisDb *db, robj *key, int flags) {
 
 最后`getGenericCommand()`函数拿到了key的查找结果，如果值对象是字符串对象，则调用`addReplyBulk()`回复客户端，否则回复`shared.wrongtypeerr`类型错误。
 
+### 过期键：删除or惰性删除
+上面已经提到过了，查找某个key时，会先调用`expireIfNeeded`判断这个key是不是已经过期了，判断过期的方法是在相应的数据库中的`expire`字典里查找这个key的值，如果值大于0（小于0则表示不过期）且小于当前时间戳（精确到毫米ms）则表示这个key过期了。
+
+根据配置，`lazyfree-lazy-expire`，Redis会选择异步（惰性）`dbAsyncDelete`或者同步`dbSyncDelete`的方式删除过期的key。
+
+#### 惰性删除
+惰性删除首先会将这个key和值对象从`expire`字典中找出来并且回收。然后从数据库`db.dict`中找到这个key，然后并不会立即回收这个key和对应的值对象，而是先计算回收值对象所需付出的代价。Redis调用函数`lazyfreeGetFreeEffort`来计算回收一个对象的时间代价。
+
+```c
+/* Delete a key, value, and associated expiration entry if any, from the DB.
+ * If there are enough allocations to free the value object may be put into
+ * a lazy free list instead of being freed synchronously. The lazy free list
+ * will be reclaimed in a different bio.c thread. */
+#define LAZYFREE_THRESHOLD 64
+int dbAsyncDelete(redisDb *db, robj *key) {
+    /* Deleting an entry from the expires dict will not free the sds of
+     * the key, because it is shared with the main dictionary. */
+    if (dictSize(db->expires) > 0) dictDelete(db->expires,key->ptr);
+
+    /* If the value is composed of a few allocations, to free in a lazy way
+     * is actually just slower... So under a certain limit we just free
+     * the object synchronously. */
+    dictEntry *de = dictUnlink(db->dict,key->ptr);
+    if (de) {
+        robj *val = dictGetVal(de);
+        size_t free_effort = lazyfreeGetFreeEffort(val);
+
+        /* If releasing the object is too much work, do it in the background
+         * by adding the object to the lazy free list.
+         * Note that if the object is shared, to reclaim it now it is not
+         * possible. This rarely happens, however sometimes the implementation
+         * of parts of the Redis core may call incrRefCount() to protect
+         * objects, and then call dbDelete(). In this case we'll fall
+         * through and reach the dictFreeUnlinkedEntry() call, that will be
+         * equivalent to just calling decrRefCount(). */
+        if (free_effort > LAZYFREE_THRESHOLD && val->refcount == 1) {
+            atomicIncr(lazyfree_objects,1);
+            bioCreateBackgroundJob(BIO_LAZY_FREE,val,NULL,NULL);
+            dictSetVal(db->dict,de,NULL);
+        }
+    }
+
+    /* Release the key-val pair, or just the key if we set the val
+     * field to NULL in order to lazy free it later. */
+    if (de) {
+        dictFreeUnlinkedEntry(db->dict,de);
+        if (server.cluster_enabled) slotToKeyDel(key);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+```
+如果代价值大于`LAZYFREE_THRESHOLD`(64)就会创建一个后台任务，在io线程里删除这个对象，否则就直接删除了。
+
+那么什么样的对象其回收代价大于64呢？元素个数大于64的列表、集合、有序集合或者字典。对于字符串对象，其回收代价永远是1。
+
+```c
+/* Return the amount of work needed in order to free an object.
+ * The return value is not always the actual number of allocations the
+ * object is compoesd of, but a number proportional to it.
+ *
+ * For strings the function always returns 1.
+ *
+ * For aggregated objects represented by hash tables or other data structures
+ * the function just returns the number of elements the object is composed of.
+ *
+ * Objects composed of single allocations are always reported as having a
+ * single item even if they are actually logical composed of multiple
+ * elements.
+ *
+ * For lists the function returns the number of elements in the quicklist
+ * representing the list. */
+size_t lazyfreeGetFreeEffort(robj *obj) {
+    if (obj->type == OBJ_LIST) {
+        quicklist *ql = obj->ptr;
+        return ql->len;
+    } else if (obj->type == OBJ_SET && obj->encoding == OBJ_ENCODING_HT) {
+        dict *ht = obj->ptr;
+        return dictSize(ht);
+    } else if (obj->type == OBJ_ZSET && obj->encoding == OBJ_ENCODING_SKIPLIST){
+        zset *zs = obj->ptr;
+        return zs->zsl->length;
+    } else if (obj->type == OBJ_HASH && obj->encoding == OBJ_ENCODING_HT) {
+        dict *ht = obj->ptr;
+        return dictSize(ht);
+    } else {
+        return 1; /* Everything else is a single allocation. */
+    }
+}
+```
+
 ### `set`
 `set`命令的格式如下
 ```
 SET key value [NX] [XX] [EX <seconds>] [PX <milliseconds>]
 ```
-命令参数解释如下【[参考](http://doc.redisfans.com/string/set.html)】：
+命令参数解释如下【[参考](http://doc.Redisfans.com/string/set.html)】：
 - EX second ：设置键的过期时间为 second 秒。 SET key value EX second 效果等同于 SETEX key second value 。
 - PX millisecond ：设置键的过期时间为 millisecond 毫秒。 SET key value PX millisecond 效果等同于 PSETEX key millisecond value 。
 - NX ：只在键不存在时，才对键进行设置操作。 SET key value NX 效果等同于 SETNX key value 。
@@ -680,7 +1003,7 @@ void setCommand(client *c) {
     setGenericCommand(c,flags,c->argv[1],c->argv[2],expire,unit,NULL,NULL);
 }
 ```
-Redis首先判断用户是否输入了`NX`或者`XX`，并设置相应的flag。并且判断是否设置了`px`或者`ex`以定义过期时间。在保存键值对前先对值进行对象编码，前面提到了，redis将用户输入的所有参数都保存成字符串对象。`tryObjectEncoding()`函数对值重新进行编码。重新编码的目的是为了节省空间。
+Redis首先判断用户是否输入了`NX`或者`XX`，并设置相应的flag。并且判断是否设置了`px`或者`ex`以定义过期时间。在保存键值对前先对值进行对象编码，前面提到了，Redis将用户输入的所有参数都保存成字符串对象。`tryObjectEncoding()`函数对值重新进行编码。重新编码的目的是为了节省空间。
 ```c
 /* Try to encode a string object in order to save space */
 robj *tryObjectEncoding(robj *o) {
