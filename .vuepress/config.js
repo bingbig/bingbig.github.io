@@ -42,11 +42,7 @@ module.exports = {
                     {
                         text: '数据库',
                         link: '/Database/content'
-                    },
-                    {
-                        text: '生物信息',
-                        link: '/Bioinformatics/content'
-                    },
+                    }
                 ]
             },
             {

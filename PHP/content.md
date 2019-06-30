@@ -24,4 +24,7 @@ next: /network/content
 ## Laravel
 - [容器](/PHP/Laravel/Container.md)
 
-<discussion page-id="php-content" />
+## walu/phpbook
+> Fork from [walu/phpbook](https://github.com/walu/phpbook/phpbook)
+
+[进入阅读 👉](/PHP/phpbook/index.md)
