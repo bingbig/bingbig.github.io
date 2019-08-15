@@ -28,6 +28,10 @@ module.exports = {
                         link: '/PHP/content'
                     },
                     {
+                        text: 'GO',
+                        link: '/GO/content'
+                    },
+                    {
                         text: '网络',
                         link: '/network/content'
                     },

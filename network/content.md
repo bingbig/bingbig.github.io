@@ -1,5 +1,5 @@
 ---
-prev: /PHP/content
+prev: /GO/content
 next: /Linux/content
 ---
 

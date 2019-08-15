@@ -1,6 +1,6 @@
 ---
 prev: /clang/content
-next: /network/content
+next: /GO/content
 ---
 
 # PHP
