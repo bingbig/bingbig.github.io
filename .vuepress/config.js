@@ -51,9 +51,14 @@ module.exports = {
             },
             {
                 text: '专栏',
-                items: [{
+                items: [
+                    {
                         text: 'Redis',
                         link: '/topics/redis/content'
+                    },
+                    {
+                        text: 'Linux 容器',
+                        link: '/topics/container/content'
                     },
                     {
                         text: '更多...',
