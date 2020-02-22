@@ -5,6 +5,8 @@ sidebar: auto
 # 算法
 > 本话题参考： [GeeksforGeeks Alogorithms](https://www.geeksforgeeks.org/fundamentals-of-algorithms/)
 
+> leetcode实战练习: [GO 语言实现](https://github.com/bingbig/leetcode-go)
+
 ## 搜索和排序
 ### 搜索
 [线性搜索](./searching_sorting.html#线性搜索)， [二分搜索](./searching_sorting.html#二分搜索)， [跳跃搜索](./searching_sorting.html#跳跃搜索)，[插值搜索](./searching_sorting.html#插值搜索)，[Exponential Search](https://www.geeksforgeeks.org/exponential-search/)，[Ternary Search](https://www.geeksforgeeks.org/binary-search-preferred-ternary-search/)
@@ -38,3 +40,4 @@ sidebar: auto
 ## 随机化算法
 
 ## 分支定界算法
+
