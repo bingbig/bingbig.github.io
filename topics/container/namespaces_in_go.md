@@ -1,10 +1,10 @@
 ---
 sidebar: auto
 prev: /topics/container/linux_namespaces.md
-next: /topics/container/namespaces_in_go.md
+next: /topics/container/namespaces_in_go_user.md
 ---
 
-# 命名空间 - Go
+# 命名空间Go实现
 
 在前面，我们通过`unshare`命名简单的了解了下命名空间。用 `unshare`写一些命名空间的小脚本很好，但是不太适合更加全面和精确的空间，比如说多个容器。在这种情况下使用一个完全支持的编程语言会更加合适。
 
@@ -69,3 +69,63 @@ func main() {
 3. [unshare(2)](http://man7.org/linux/man-pages/man2/unshare.2.html) - 将调用进程移到新的命名空间
 
 `unshare` 看起来很前面的文章里写的很相似。在执行`unshare`命令时会触发这个系统调用。我们这次关注的系统调用是`clone()`， Go语言中的`exec.Run()` 会执行`clone()`这个系统调用。
+
+调用`clone()`的时候可以传入一个或者多个`CLONE_*` flag。每个命名空间都有一个相应的 CLONE flag： `CLONE_NEWNS`, `CLONE_NEWUTS`, `CLONE_NEWIPC`, `CLONE_NEWPID`, `CLONE_NEWNET`, `CLONE_NEWUSER` and `CLONE_NEWCGROUP`。新的进程的执行上下文环境就是由这些传入的flag定义的。
+
+在Go语言中，`SysProcAttr`可以设置`exec.Command`的属性。通过执行`Cloneflags`属性，Go会传入相应的`CLONE_*` flag给系统调用`clone()`。这样，我们就可以控制我们的进程在什么样的命名空间里执行了。
+
+编译和执行这个程序，你会进入一个在新的UTS命名空间运行的 `/bin/sh` 。**执行这个程序必须有管理员权限！**
+
+```bash
+root@HiBing➜ns-process git:(v1.0) go build
+root@HiBing➜ns-process git:(v1.0) ./ns-process
+-[ns-process]- #
+```
+
+进入这个在新的UTS命名空间运行的的shell之后我们来确认一件事情。
+
+```bash
+-[ns-process]- # readlink /proc/self/ns/uts
+uts:[4026532156]
+-[ns-process]- # exit
+exit
+root@HiBing➜ns-process git:(v1.0) readlink /proc/self/ns/uts
+uts:[4026531838]
+```
+
+`/proc/self/ns/uts`的内容包括了命名空间的类型（UTS）和命名空间的inode号。事实上我们可以看到`ns-process`shell里面的命名空间inode号和外面的是不一样的。
+
+然而这还不够，这一步我们仅仅是为这个进程创建了一个命名空间。我们在加点其他的flags，如下:
+
+```go
+# Git repo: https://github.com/teddyking/ns-process
+# Git tag: 1.1
+# Filename: ns_process.go
+...
+cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWNS |
+			syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWNET |
+			syscall.CLONE_NEWUSER,
+	}
+...
+```
+
+再次编译和执行这个进程，这次，我们的`/bin/sh`进程会在一个新的Mount、UTS、IPC、PID、Network和User命名空间运行。
+
+> 当我们创建各种命名空间的时候如果包含了User命名空间，那么User命名空间会被最先创建。User命名空间可以不需要root权限来创建，这就意味着我们可以作为普通用户来执行我们的程序。
+
+但是我们的程序还有问题，因为我们缺少了很多初始化和命名空间配置的工作，比如说：
+
+- 新的Mount命名空间（`CLONE_NEWNS`）还是挂载这宿主机的挂载点和rootfs
+- 新的PID命名空间(`CLONE_NEWPID`)没有挂载新的`/proc`文件系统
+- 新的Netwrok命名空间（`CLONE_NEWNET`）没有设置命名空间内部的网络接口
+- 新的User命名无法提供UID/GID映射
+
+这意味着我们还有很多要做的改进。
+
+## 接下来
+
+现在我们知道了如何用GO写一个能在一系列新的命名空间运行的进程了。接下来我么将一步步配置和初始化命名空间。
