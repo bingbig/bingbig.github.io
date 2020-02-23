@@ -14,7 +14,9 @@ sidebar: auto
 - [命名空间Go实现 - Mount](./namespaces_in_go_mount.md)
 - [命名空间Go实现 - Network](./namespaces_in_go_network.md)
 - [命名空间Go实现 - UTS](./namespaces_in_go_uts.md)
+- [命名空间Go实现 - CGROUPS](./namespaces_in_go_cgroups.md)
 
 ## 参考
 - [https://medium.com/@teddyking/linux-namespaces-850489d3ccf](https://medium.com/@teddyking/linux-namespaces-850489d3ccf)
+- [CGROUPS 参考](https://medium.com/@ssttehrani/containers-from-scratch-with-golang-5276576f9909)
 - [Gontainer](https://github.com/alegrey91/Gontainer)

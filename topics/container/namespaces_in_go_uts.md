@@ -1,7 +1,7 @@
 ---
 sidebar: auto
 prev: /topics/container/namespaces_in_go_network.md
-next: /topics/container/content.md
+next: /topics/container/namespaces_in_go_cgroups.md
 ---
 
 # 命名空间Go实现 - UTS
