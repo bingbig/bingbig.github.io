@@ -70,9 +70,9 @@ HiBing
 
 最后我们`exit` 这个命名空间中的shell，然后执行`hostname`再确认一次。我们可以看到主机名没有变化，尽管我们执行了 `hostname my-new-hostname`。这是因为这只在新的 UTS 命名空间中才会生效。
 
-**7个命名空间**
+**命名空间和CGroups**
 
-上面的例子阐述了 UTS 命名空间，但是有趣的内容不止这些。在写作本文的时候一共有7个命名空间类型。
+LXC（Linux Container）所实现的隔离性主要是来自kernel的namespace, 其中pid, net, ipc, mnt, uts 等namespace将container的进程, 网络, 消息, 文件系统和hostname 隔离开。
 
 1. Mount 隔离系统文件挂载点
 2. UTS 隔离主机名和域名
@@ -80,9 +80,10 @@ HiBing
 4. PID 隔离PID号区间
 5. Network 隔离网络接口
 6. User 隔离UID/GID号空间
-7. Cgroup 隔离cgroup root目录
 
-大多数的容器实现都用到了上面所提的命名空间来提供高层次的容器间进程的隔离。但是注意cgroup命名空间相比其他比较新，还没有被广泛使用。
+Cgroup（Control Groups） 隔离cgroup root目录
+
+大多数的容器实现都用到了上面所提的命名空间来提供高层次的容器间进程的隔离并使用了cgroup的限额功能。
 
 ## 接下来
 
