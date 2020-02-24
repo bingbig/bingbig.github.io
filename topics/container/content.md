@@ -13,6 +13,7 @@ sidebar: auto
 - [命名空间Go实现 - Network](./namespaces_in_go_network.md)
 - [命名空间Go实现 - UTS](./namespaces_in_go_uts.md)
 - [命名空间Go实现 - CGROUPS](./namespaces_in_go_cgroups.md)
+- [Docker 和 LXC](./docker_lxc.md)
 
 ## 参考
 - [https://medium.com/@teddyking/linux-namespaces-850489d3ccf](https://medium.com/@teddyking/linux-namespaces-850489d3ccf)

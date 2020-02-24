@@ -81,7 +81,7 @@ LXC（Linux Container）所实现的隔离性主要是来自kernel的namespace, 
 5. Network 隔离网络接口
 6. User 隔离UID/GID号空间
 
-Cgroup（Control Groups） 隔离cgroup root目录
+Cgroup（Control Groups）属于Linux内核提供的一个特性，用于限制和隔离一组进程对系统资源的使用，也就是左资源QoS，这些资源主要是包括CPU，内存，block I/O和网络带宽。
 
 大多数的容器实现都用到了上面所提的命名空间来提供高层次的容器间进程的隔离并使用了cgroup的限额功能。
 

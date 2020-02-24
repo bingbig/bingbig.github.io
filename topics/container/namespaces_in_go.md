@@ -82,6 +82,10 @@ func run() {
 
 调用`clone()`的时候可以传入一个或者多个`CLONE_*` flag。每个命名空间都有一个相应的 CLONE flag： `CLONE_NEWNS`, `CLONE_NEWUTS`, `CLONE_NEWIPC`, `CLONE_NEWPID`, `CLONE_NEWNET`, `CLONE_NEWUSER` and `CLONE_NEWCGROUP`。新的进程的执行上下文环境就是由这些传入的flag定义的。
 
+> Mount Namespace是第一个实现的Namespace，当初实现时并不是为了实现linux容器，因为也就没有预料到会有新的Namespace出现，所以用了`CLONE_NEWNS`而不是`CLONE_NEWMNT`之类的名字。
+
+
+
 在Go语言中，`SysProcAttr`可以设置`exec.Command`的属性。通过执行`Cloneflags`属性，Go会传入相应的`CLONE_*` flag给系统调用`clone()`。这样，我们就可以控制我们的进程在什么样的命名空间里执行了。
 
 编译和执行这个程序，你会进入一个在新的UTS命名空间运行的 `/bin/sh` 。**执行这个程序必须有管理员权限！**

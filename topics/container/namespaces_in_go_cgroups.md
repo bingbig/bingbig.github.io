@@ -1,7 +1,7 @@
 ---
 sidebar: auto
 prev: /topics/container/namespaces_in_go_uts.md
-next: /topics/container/content.md
+next: /topics/container/docker_lxc.md
 ---
 
 # 命名空间Go实现 - CGROUPS
