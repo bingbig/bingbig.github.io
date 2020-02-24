@@ -6,15 +6,15 @@ next: /topics/container/namespaces_in_go_mount.md
 
 # 命名空间Go实现 - reexec
 
-本文的目的是理解`reexec`包。`reexec` 是Docker 代码的一部分，提供了一个很方便的方法是的可执行文件“自我执行”。在了解详细内容之前，我们先看看`reexec`帮我们解决了什么问题。
+本文的目的是理解`reexec`包。`reexec` 是Docker代码的一部分，提供了一个很方便的方法是的可执行文件“自我执行”。在了解详细内容之前，我们先看看`reexec`帮我们解决了什么问题。
 
-举个例子来说明这个问题。考虑这样一个问题。我们想修改`ns-process`，使得它在新的UTS命名空间里有一个随机生成的主机名。为了安全的原因，在`/bin/sh`进程开始前，我们就得把主机名修改了。毕竟，我们不希望在`ns-process`的shell里可以获取到宿主机的主机名。
+举个例子来说明这个问题。考虑这样一个问题。我们想修改`container`，使得它在新的UTS命名空间里有一个随机生成的主机名。为了安全的原因，在`/bin/sh`进程开始前，我们就得把主机名修改了。毕竟，我们不希望在`container`的shell里可以获取到宿主机的主机名。
 
 就我所知，Go原生不支持这些。`exec.Command`不但可以通过设置属性来创建命名空间，也可以指定我们想要执行的进程。举个例子：
 ```go
 cmd := exec.Command("/bin/echo", "Process already running")
 cmd.SysProcAttr = &syscall.SysProcAttr{
- Cloneflags: syscall.CLONE_NEWUTS,
+	Cloneflags: syscall.CLONE_NEWUTS,
 }
 cmd.Run()
 ```
@@ -37,7 +37,7 @@ func Register(name string, initializer func()) {
 }
 ```
 
-`Register` 函数支持通过名字注册任意方法到内存中。我们将会在`ns-process`开始后的以后注册一些用于初始化命名空间的方法。
+`Register` 函数支持通过名字注册任意方法到内存中。我们将会在`container`开始后的以后注册一些用于初始化命名空间的方法。
 
 ```go
 // Init is called as the first part of the exec process and returns true if an
@@ -84,7 +84,7 @@ func Command(args ...string) *exec.Cmd {
 首先创建一个方法并且使用`reexec`来注册它。
 
 ```go
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/teddyking/container
 # Git tag: 3.0
 # Filename: ns_process.go
 # ...
@@ -100,36 +100,54 @@ func init() {
 这里有两个重要的点。一是我们用“nsInitialisation”注册了`nsInitialisation`方法。二是我们调用了`reexce.Init()`方法并且在返回`true`的时候结束进程(`os.Exit(0)`，这一步是非常重要的，如果不退出将陷入无限循环，程序会不停的`reexec`它自己。接着我们增加`nsInitialisation`方法。
 
 ```go
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/bingbig/container
 # Git tag: 3.0
-# Filename: ns_process.go
+# Filename: container.go
 # ...
 func nsInitialisation() {
 	fmt.Printf("\n>> namespace setup code goes here <<\n\n")
 	nsRun()
 }
+
 func nsRun() {
-	cmd := exec.Command("/bin/sh")
+	cmd := exec.Command(os.Args[1], os.Args[2:]...)
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	cmd.Env = []string{"PS1=-[ns-process]- # "}
+	cmd.Env = []string{"PS1=-[container]- # "}
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("Error running the /bin/sh command - %s\n", err)
+		fmt.Printf("Error running the %s command - %s\n", os.Args[1], err)
 		os.Exit(1)
 	}
 }
 ```
 调用`nsInitialisation` 后会调用`nsRun()`, 而后者会执行`/bin/sh`进程。
 
-最后我们需要做的就是修改`main()`方法，用`reexec` 和 `nsInitialisation` 来运行`/bin/sh`，而不是之前那样直接调用。
+最后我们需要做的就是修改`run()`方法，用`reexec` 和 `nsInitialisation` 来运行`/bin/sh`，而不是之前那样直接调用。
 
 ```go{2}
 func main() {
-	cmd := reexec.Command("nsInitialisation")
+	if len(os.Args) < 2 {
+		panic("pass me an argument please")
+	}
+
+	switch os.Args[1] {
+	case "run":
+		if len(os.Args) < 3 {
+			panic("pass me a cmd to run in container please")
+		}
+		run()
+	default:
+		panic("pass me an argument please")
+	}
+}
+
+func run() {
+	cmd := reexec.Command(append([]string{"nsInitialisation"},
+		os.Args[2:]...)...)
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -169,10 +187,10 @@ func main() {
 
 ```bash
 $ go build
-$ ./ns-process
+$ ./container run /bin/sh
 
 >> namespace setup code goes here <<
--[ns-process]- #
+-[container]- #
 ```
 
 成功了！我们现在有`nsInitialisation` 方法帮助我们初始化任意的命名空间了。

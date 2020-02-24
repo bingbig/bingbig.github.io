@@ -4,8 +4,6 @@ sidebar: auto
 
 # Linux 容器
 
-> 本节内容翻译自： [https://medium.com/@teddyking/linux-namespaces-850489d3ccf](https://medium.com/@teddyking/linux-namespaces-850489d3ccf)
-
 ## 目录
 - [Linux 命名空间](./linux_namespaces.md)
 - [命名空间Go实现](./namespaces_in_go.md)
@@ -18,5 +16,5 @@ sidebar: auto
 
 ## 参考
 - [https://medium.com/@teddyking/linux-namespaces-850489d3ccf](https://medium.com/@teddyking/linux-namespaces-850489d3ccf)
-- [CGROUPS 参考](https://medium.com/@ssttehrani/containers-from-scratch-with-golang-5276576f9909)
+- [https://medium.com/@ssttehrani/containers-from-scratch-with-golang-5276576f9909](https://medium.com/@ssttehrani/containers-from-scratch-with-golang-5276576f9909)
 - [Gontainer](https://github.com/alegrey91/Gontainer)

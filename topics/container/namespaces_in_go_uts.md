@@ -5,19 +5,22 @@ next: /topics/container/namespaces_in_go_cgroups.md
 ---
 
 # 命名空间Go实现 - UTS
-在上篇文章我们配置了Network命名空间并且为`ns-process`提供了一个可以访问的IP地址。现在`ns-process`可以加入网络了，如果能设置一个主机名就更好了。在本文，我们将配置UTS命名空间。
+在上篇文章我们配置了Network命名空间并且为`container`提供了一个可以访问的IP地址。现在`container`可以加入网络了，如果能设置一个主机名就更好了。在本文，我们将配置UTS命名空间。
 
 我们先看看当前的行为。
 
 ```bash
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/bingbig/container
 # Git tag: 5.0
-$ hostname
-ubuntu-xenial
-$ go build
-$ ./ns-process
--[ns-process]- # hostname
-ubuntu-xenial
+# Filename: container.go
+liub@HiBing➜container git:(master) ✗ hostname
+HiBing
+liub@HiBing➜container git:(master) ✗ ./container run /bin/sh
+
+>> namespace setup code goes here <<
+
+host-[container]- # hostname
+HiBing
 ```
 
 我们可以看到新的命名空间里面的主机名和宿主机的相同。幸运的是这个很好解决。
@@ -26,9 +29,9 @@ ubuntu-xenial
 在Go中，主机名可以i通过`syscall.SetHostName`来设置。
 
 ```go{17-20}
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/bingbig/container
 # Git tag: 6.0
-# Filename: ns_process.go
+# Filename: container.go
 func nsInitialisation() {
 	newrootPath := os.Args[1]
 
@@ -42,7 +45,7 @@ func nsInitialisation() {
 		os.Exit(1)
 	}
 
-	if err := syscall.Sethostname([]byte("ns-process")); err != nil {
+	if err := syscall.Sethostname([]byte("container")); err != nil {
 		fmt.Printf("Error setting hostname - %s\n", err)
 		os.Exit(1)
 	}
@@ -60,17 +63,24 @@ func nsInitialisation() {
 就这些了！我们来确认以下我们的实现是不是如我们期望的。
 
 ```bash
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/bingbig/container
 # Git tag: 6.0
-$ hostname
-ubuntu-xenial
-$ go build
-$ ./ns-process
--[ns-process]- # hostname
-ns-process
+# Filename: container.go
+liub@HiBing➜container git:(master) ✗ ./container run /bin/sh
+
+>> namespace setup code goes here <<
+
+-[container]- # hostname
+container
+-[container]- # exit
+liub@HiBing➜container git:(master) ✗ hostname
+HiBing
 ```
 
 完美！
+
+## 接下来
+如何限制容器使用的系统资源呢？
 
 
 

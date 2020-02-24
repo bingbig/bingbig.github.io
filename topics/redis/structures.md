@@ -272,7 +272,7 @@ SDS相对于C字符串有以下优势：
 ### 编译测试
 Redis SDS可以作为独立的模块使用。编译测试：
 
-```shell
+```bash
 gcc -DSDS_TEST_MAIN -o sds sds.c zmalloc.c
 ```
 
@@ -1047,7 +1047,7 @@ unsigned long dictScan(dict *d,
 ### 编译测试
 Redis字典依赖于SDS，可以通过下面的方法编译测试。
 
-```shell
+```bash
 gcc -DDICT_BENCHMARK_MAIN -o dict dict.c sds.c zmalloc.c siphash.c 
 ```
 

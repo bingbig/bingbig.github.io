@@ -6,9 +6,9 @@ next: /topics/container/namespaces_in_go_user.md
 
 # 命名空间Go实现
 
-在前面，我们通过`unshare`命名简单的了解了下命名空间。用 `unshare`写一些命名空间的小脚本很好，但是不太适合更加全面和精确的空间，比如说多个容器。在这种情况下使用一个完全支持的编程语言会更加合适。
+在前面，我们通过`unshare`命名简单的了解了命名空间。用 `unshare`写一些命名空间的小脚本很好，但是不太适合更加全面和精确的空间，比如说多个容器。在这种情况下使用一个完全支持的编程语言会更加合适。
 
-GO成为容器实现的编程语言很大程度上是因为Docker（仍然由Go开发）。Docker是非常成功的开源Go项目之一，它向世界展示了God的强大。
+GO成为容器实现的编程语言很大程度上是因为Docker（仍然由Go开发）。Docker是非常成功的开源Go项目之一，它向世界展示了Go的强大。
 
 Docker的开发者之前列举过选择Go来开发Docker的[几个理由](https://www.slideshare.net/jpetazzo/docker-and-go-why-did-we-decide-to-write-docker-in-go)，包括静态编译，原生的异步支持，底层接口，完整的开发环境和很强的跨交叉编译能力。
 
@@ -17,16 +17,17 @@ Docker的开发者之前列举过选择Go来开发Docker的[几个理由](https:
 
 ## Let's Go
 
-这一系列的文章主要是为了帮助理解如何用Go来使用Linux命名空间。为了达成这个目的，我们将编写一个简单的应用`ns-process`。
+这一系列的文章主要是为了帮助理解如何用Go来使用Linux命名空间。为了达成这个目的，我们将编写一个简单的应用`container`。
 
-`ns-process`一开始会很简单，在一系列命名空间中创建`/bin/sh`进程，最终我们会创建一个 `unprivileged` 的容器。先不要担心 `unprivileged` 的含义，我们之后将会慢慢解释。
+`container`一开始会很简单，在一系列命名空间中创建`/bin/sh`进程，最终我们会创建一个 `unprivileged` 的容器。先不要担心 `unprivileged` 的含义，我们之后将会慢慢解释。
 
-`ns-process`的代码可以在[GitHub](https://github.com/teddyking/ns-process)上找到。
+`container`的代码可以在[GitHub](https://github.com/bingbig/container)上找到。
 
 ```go
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/bingbig/container
 # Git tag: 1.0
-# Filename: ns_process.go
+# Filename: container.go
+# Run: go build && ./container run /bin/sh
 package main
 
 import (
@@ -37,20 +38,29 @@ import (
 )
 
 func main() {
-	cmd := exec.Command("/bin/sh")
+	switch os.Args[1] {
+	case "run":
+		run()
+	default:
+		panic("pass me an argument please")
+	}
+}
+func run() {
+	fmt.Printf("Running %v\n", os.Args[2:])
+	cmd := exec.Command(os.Args[2], os.Args[3:]...)
 
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	cmd.Env = []string{"PS1=-[ns-process]- # "}
+	cmd.Env = []string{"PS1=-[container]- # "}
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWUTS,
 	}
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("Error running the /bin/sh command - %s\n", err)
+		fmt.Printf("Error running the %s command - %s\n", os.Args[1], err)
 		os.Exit(1)
 	}
 }
@@ -77,30 +87,31 @@ func main() {
 编译和执行这个程序，你会进入一个在新的UTS命名空间运行的 `/bin/sh` 。**执行这个程序必须有管理员权限！**
 
 ```bash
-root@HiBing➜ns-process git:(v1.0) go build
-root@HiBing➜ns-process git:(v1.0) ./ns-process
--[ns-process]- #
+root@HiBing➜container git:(v1.0) go build
+root@HiBing➜container git:(v1.0) ./container run /bin/sh
+-[container]- #
 ```
 
 进入这个在新的UTS命名空间运行的的shell之后我们来确认一件事情。
 
 ```bash
--[ns-process]- # readlink /proc/self/ns/uts
+Running [/bin/bash]
+-[container]- # readlink /proc/self/ns/uts
 uts:[4026532156]
--[ns-process]- # exit
+-[container]- # exit
 exit
-root@HiBing➜ns-process git:(v1.0) readlink /proc/self/ns/uts
+root@HiBing➜container readlink /proc/self/ns/uts
 uts:[4026531838]
 ```
 
-`/proc/self/ns/uts`的内容包括了命名空间的类型（UTS）和命名空间的inode号。事实上我们可以看到`ns-process`shell里面的命名空间inode号和外面的是不一样的。
+`/proc/self/ns/uts`的内容包括了命名空间的类型（UTS）和命名空间的inode号。事实上我们可以看到`container`shell里面的命名空间inode号和外面的是不一样的。
 
 然而这还不够，这一步我们仅仅是为这个进程创建了一个命名空间。我们在加点其他的flags，如下:
 
 ```go
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/bingbig/container
 # Git tag: 1.1
-# Filename: ns_process.go
+# Filename: container.go
 ...
 cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWNS |
@@ -114,6 +125,33 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 ```
 
 再次编译和执行这个进程，这次，我们的`/bin/sh`进程会在一个新的Mount、UTS、IPC、PID、Network和User命名空间运行。
+
+**运行出现问题？**
+我是在CentOS 7.7上运行的这个程序，会出现无效参数的报错。一个个参数尝试发现是`CLONE_NEWUSER`不支持。通过 `strace`追踪原因：
+```bash
+$ strace -o logf -f unshare -U sh
+unshare: unshare failed: Invalid argument
+$ grep 'Invalid argument' logf
+31728 unshare(CLONE_NEWUSER)            = -1 EINVAL (Invalid argument)
+31728 write(2, "Invalid argument\n", 17) = 17
+```
+
+报错的原因是`unshare(2)`失败了，查阅文档：
+```bash
+[liub@HiBing container]$ man 2 unshare | col -b | grep CLONE_NEWUSER
+在第 2 节中没有关于 unshare 的手册页条目。
+```
+再看看系统是不是打开了User命名空间支持[is it safe to enable user namespaces ](https://superuser.com/questions/1294215/is-it-safe-to-enable-user-namespaces-in-centos-7-4-and-how-to-do-it/1294246#1294246)
+```bash
+# cat /proc/sys/user/max_user_namespaces
+0
+# echo 640 > /proc/sys/user/max_user_namespaces
+# unshare -U sh
+sh-4.2$ 
+```
+成功！[更多阅读](https://rhelblog.redhat.com/2015/07/07/whats-next-for-containers-user-namespaces/)。
+
+
 
 > 当我们创建各种命名空间的时候如果包含了User命名空间，那么User命名空间会被最先创建。User命名空间可以不需要root权限来创建，这就意味着我们可以作为普通用户来执行我们的程序。
 

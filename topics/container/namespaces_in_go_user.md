@@ -8,29 +8,28 @@ next: /topics/container/namespaces_in_go_reexec.md
 
 在前面的文章中我们知道了如何用Go实现在不同命名空间运行的程序了。
 
-我们在`ns-process`中加了User命名空间，这样我们就不再需要以root身份执行了。这个特性意味着`ns-process`可以变得更加安全。关于User命名空间我们可以比较一下加了User命名空间前后`whoami`的输出。
+我们在`container`中加了User命名空间，这样我们就不再需要以root身份执行了。这个特性意味着`container`可以变得更加安全。关于User命名空间我们可以比较一下加了User命名空间前后`whoami`的输出。
 
 ```bash
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/bingbig/container
 # Git tag: 1.0
 # 加入 User namespace 前
 $ go build
-$ ./ns-process
--[ns-process]- # whoami
+$ ./container run /bin/sh
+-[container]- # whoami
 root
--[ns-process]- # id root
+-[container]- # id root
 uid=0(root) gid=0(root) groups=0(root)
 # Git tag: 1.1
-# 加入 User namespace 后(在centos 7.7 中执行失败。。。)
 $ go build
-$ ./ns-process
--[ns-process]- # whoami
+$ ./container run /bin/sh
+-[container]- # whoami
 nobody
--[ns-process]- # id nobody
+-[container]- # id nobody
 uid=65534(nobody) gid=65534(nogroup) groups=65534(nogroup)
 ```
 
-虽然我们现在可以以非root用户身份执行`ns-process`， 但是一定进如新的命名空间shell，我们会丢失root身份。
+虽然我们现在可以以非root用户身份执行`container`， 但是一定进如新的命名空间shell，我们会丢失root身份。
 
 ![who am i](./images/1_92KoE7150PT1rfC-AGO36w.gif)
 
@@ -55,7 +54,7 @@ ID映射和它和User命名空间的关系是一个复杂的话题。但是为�
 
 进程D只有在User命名空间2中才会有root权限。从User命名空间1看来，进程D是以非root身份运行的，并没有全部的root权限。
 
-`ns-process`当前就是缺失这个映射，我们来解决这个问题。
+`container`当前就是缺失这个映射，我们来解决这个问题。
 
 ## Let's Go
 
@@ -72,9 +71,9 @@ type SysProcIDMap struct {
 顾名思义，`ContainerID` 和 `HostID` 就是容器ID和主机ID。`Size` 定义了IDs映射的范围大小，我们可以一次映射多个ID。在我们程序中加入一些映射：
 
 ```go
-# Git repo: https://github.com/teddyking/ns-process
+# Git repo: https://github.com/bingbig/container
 # Git tag: 2.0
-# Filename: ns_process.go
+# Filename: container.go
 # ...
 cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWNS |
@@ -101,14 +100,14 @@ cmd.SysProcAttr = &syscall.SysProcAttr{
 # ...
 ```
 
-上面我们加入了单个UID和GID映射。我们将容器ID设置为0，主机ID设置为当前用户的UID/GID。这样，我们执行`ns-process`命名后，在新的User命名空间运行的用户ID就是0了。
+上面我们加入了单个UID和GID映射。我们将容器ID设置为0，主机ID设置为当前用户的UID/GID。这样，我们执行`container`命名后，在新的User命名空间运行的用户ID就是0了。
 
 ```
 $ go build
-$ ./ns-process
--[ns-process]- # whoami
+$ ./container run /bin/sh
+-[container]- # whoami
 root
--[ns-process]- # id
+-[container]- # id
 uid=0(root) gid=0(root) groups=0(root)
 ```
 

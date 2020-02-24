@@ -43,7 +43,7 @@ root@host:~# cat \
 ## There is no limitation on this container processes
 ```
 
-在看看有cgroup限制的例子：
+再看看有cgroup限制的例子：
 
 ```bash
 root@host:~# docker run —name alpine —rm -it —memory 50M alpine:latest /bin/sh
@@ -59,62 +59,11 @@ root@host:~# cat \
 
 因此我们知道了如何限制容器的资源，开始撸码！
 
-```go{55-66}
-package main
-
-import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strconv"
-	"syscall"
-)
-
-func main() {
-	switch os.Args[1] {
-	case "run":
-		run()
-	case "ns":
-		ns()
-	default:
-		panic("pass me an argument please")
-	}
-}
-func run() {
-	fmt.Printf("Running %v as %d\n", os.Args[2:], os.Getpid())
-	cmd := exec.Command("/proc/self/exe", append([]string{"ns"},
-		os.Args[2:]...)...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags:   syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
-		Unshareflags: syscall.CLONE_NEWNS,
-	}
-	cmd.Run()
-}
-
-func ns() {
-	fmt.Printf("Running in new UTS namespace %v as %d\n", os.Args[2:], os.Getpid())
-
-	cg()
-	syscall.Sethostname([]byte("inside-container"))
-	syscall.Chroot("/root/containerFS")
-	syscall.Chdir("/") // set the working directory inside container
-	syscall.Mount("proc", "proc", "proc", 0, "")
-	cmd := exec.Command(os.Args[2], os.Args[3:]...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	cmd.Run()
-
-	syscall.Unmount("/proc", 0)
-}
-
-func cg() {
+```go
+# Git repo: https://github.com/bingbig/container
+# Git tag: 6.0
+# Filename: container.go
+func set_cgroups() {
 	cgroups := "/sys/fs/cgroup/"
 	pids := filepath.Join(cgroups, "pids")
 	os.Mkdir(filepath.Join(pids, "ourContainer"), 0755)
@@ -127,12 +76,45 @@ func cg() {
 	// up here we write container PIDs to cgroup.procs
 }
 ```
+
+在初始化中调用`set_cgroups`。
+```go{19}
+# Git repo: https://github.com/bingbig/container
+# Git tag: 6.0
+# Filename: container.go
+func nsInitialisation() {
+	fmt.Printf("\n>> namespace setup code goes here <<\n\n")
+
+	setMount("/root/containerFS")
+
+	if err := waitForNetwork(); err != nil {
+		fmt.Printf("Error waiting for network - %s\n", err)
+		os.Exit(1)
+	}
+
+	if err := syscall.Sethostname([]byte("container")); err != nil {
+		fmt.Printf("Error setting hostname - %s\n", err)
+		os.Exit(1)
+	}
+
+	set_cgroups()
+
+	nsRun()
+}
+```
+
 执行！
 
 ```bash
-root@host:~# go run container.go run /bin/sh
-Running [/bin/sh] as 11219
-Running in new UTS namespace [/bin/sh] as 1
+# Git repo: https://github.com/bingbig/container
+# Git tag: 6.0
+# Filename: container.go
+liub@HiBing➜container git:(master) ✗ go build
+liub@HiBing➜container git:(master) ✗ ./container run /bin/sh
+
+>> namespace setup code goes here <<
+
+-[container]- #
 ```
 
 我们还可以看到程序创建的PID类型的cgroup文件：
